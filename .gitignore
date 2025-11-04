@@ -39,6 +39,7 @@ logs/
 # IDE / editor project files
 .idea/
 .vscode/
+*.pyproject.user
 
 # OS metadata
 .DS_Store

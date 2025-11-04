@@ -1,0 +1,9 @@
+{
+    "files": [
+        "form.ui",
+        "connection_form.ui",
+        "motor_stats.ui",
+        "record_system.ui",
+        "record_bus.ui"
+    ]
+}
