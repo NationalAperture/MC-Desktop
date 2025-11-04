@@ -20,6 +20,13 @@ Launch the Qt UI after activating the virtual environment:
 python -m mc_desktop
 ```
 
+### Update UI Forms
+After modifying any `.ui` file in `mc_desktop/ui/designer/` via Qt Creator, regenerate the Python form classes:
+```bash
+source .venv/bin/activate  # Windows: .venv\Scripts\activate
+python scripts/generate_ui.py
+```
+
 ## Test
 Characterization tests ensure the refactor remains stable:
 ```bash
