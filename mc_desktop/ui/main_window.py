@@ -113,15 +113,20 @@ class Connection(QWidget):
 
     def add_node(self):
         node_id = self.ui.add_node_value.text()
-        self.ui.remove_node_combo.addItem(node_id)
-        self.parent.add_node(node_id)
-        self.parent.comboBox.setCurrentIndex(self.parent.comboBox.count() - 1)
-        self.parent.get_node_values(node_id)
+        if not node_id:
+            return
+        if self.parent.add_node(node_id):
+            self.ui.remove_node_combo.addItem(node_id)
+            self.parent.comboBox.setCurrentIndex(self.parent.comboBox.count() - 1)
+            self.parent.get_node_values(node_id)
 
     def remove_node(self):
         node_index = self.ui.remove_node_combo.currentIndex()
-        self.ui.remove_node_combo.removeItem(node_index)
-        self.parent.remove_node(node_index)
+        if node_index < 0:
+            return
+        node_id = self.ui.remove_node_combo.itemText(node_index)
+        if self.parent.remove_node(node_id, node_index):
+            self.ui.remove_node_combo.removeItem(node_index)
 
     def update_node(self):
         # This changes the currently selected node's id, to the new id the user has just entered.
@@ -129,8 +134,10 @@ class Connection(QWidget):
         new_node = self.ui.update_node_value.text()
         for i in range(self.ui.remove_node_combo.count()):
             if self.ui.remove_node_combo.itemText(i) == current_node:
-                self.ui.remove_node_combo.setItemText(i, new_node)
-                self.parent.update_node_id(i, new_node)
+                if self.parent.update_node_id(i, current_node, new_node):
+                    self.ui.remove_node_combo.setItemText(i, new_node)
+                    self.ui.update_node_value.clear()
+                break
 
     def select_port(self):
         port = self.ui.port_list.selectedItems()[0].text()
@@ -1034,19 +1041,39 @@ class MainWindow(QMainWindow):
             motor_stat.update_motor_values(values)
 
     def add_node(self, node_id):
+        if not node_id:
+            return False
+        added = self.node_manager.add_node(node_id)
+        if not added:
+            logger.warning("Node %s already exists; skipping add.", node_id)
+            return False
         self.comboBox.addItem(node_id)
-        self.node_manager.add_node(node_id)
-        self.node_index.update({node_id: self.comboBox.count() -1 })
         motor_stat = MotorStats(self, node_id)
         self.motor_stats.append(motor_stat)
+        self._rebuild_node_index()
         self.repopulate_layout()
+        return True
 
+    def remove_node(self, node_id, index):
+        if index < 0 or index >= self.comboBox.count():
+            return False
+        removed = self.node_manager.remove_node(node_id)
+        if not removed:
+            logger.warning("Attempted to remove unknown node %s", node_id)
+            return False
 
-    def remove_node(self, node_index):
-        self.comboBox.removeItem(node_index)
-        self.node_manager.remove_node(node_index)
-        del self.motor_stats[node_index]
+        self.comboBox.removeItem(index)
+        if index < len(self.motor_stats):
+            del self.motor_stats[index]
+        self._rebuild_node_index()
+        new_current = self.node_manager.current_node_id
+        if new_current:
+            current_index = self.node_index.get(new_current, -1)
+            if current_index >= 0:
+                self.comboBox.setCurrentIndex(current_index)
+                self.serial.node_id = new_current
         self.repopulate_layout()
+        return True
 
     def repopulate_layout(self):
         clear_layout(self.ui.system_monitor.layout(), False)
@@ -1054,14 +1081,30 @@ class MainWindow(QMainWindow):
             self.ui.system_monitor.layout().addWidget(motor_stat)
         self.ui.system_monitor.layout().addItem(self.verticalSpacer)
 
-    def update_node_id(self, index, node_value):
-        self.comboBox.setItemText(index, node_value)
-        motor_stat = self.motor_stats[index]
-        motor_stat.set_group_box_title(node_value)
-        cmd = ("adr", node_value)
+    def update_node_id(self, index, old_node_id, new_node_id):
+        if not new_node_id or new_node_id == old_node_id:
+            return False
+
+        self.node_manager.current_node_id = old_node_id
+        if not self.node_manager.update_node_id(new_node_id):
+            logger.warning("Unable to rename node %s -> %s", old_node_id, new_node_id)
+            return False
+
+        if index < self.comboBox.count():
+            self.comboBox.setItemText(index, new_node_id)
+        if index < len(self.motor_stats):
+            motor_stat = self.motor_stats[index]
+            motor_stat.set_group_box_title(new_node_id)
+
+        self.serial.node_id = new_node_id
+        self._rebuild_node_index()
+
+        cmd = ("adr", new_node_id)
         self.send_command(cmd)
-        self.serial.node_id = node_value
-        self.node_manager.update_node_id(node_value)
+        return True
+
+    def _rebuild_node_index(self):
+        self.node_index = {self.comboBox.itemText(i): i for i in range(self.comboBox.count())}
 
     def selected_new_node(self):
         node_id = self.comboBox.currentText()
