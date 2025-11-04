@@ -1,0 +1,14 @@
+version: 1
+roles:
+  codegen:
+    path: AGENTS/codegen.md
+    when: ["generate_code", "write_tests", "new_api", "feature"]
+  refactor:
+    path: AGENTS/refactor.md
+    when: ["refactor", "migrate", "extract_module", "cleanup"]
+  research:
+    path: AGENTS/research.md
+    when: ["investigate", "compare", "web_search", "rfc"]
+  security:
+    path: AGENTS/security.md
+    when: ["secrets", "auth", "crypto", "injection", "pci", "gdpr"]
