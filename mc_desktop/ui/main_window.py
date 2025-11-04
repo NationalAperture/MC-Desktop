@@ -10,19 +10,31 @@ import os
 import logging
 from collections import deque
 from datetime import datetime
-from pathlib import Path
-from logging.handlers import RotatingFileHandler
-from PySide6.QtWidgets import QApplication, QMainWindow, QFileDialog, QWidget, QComboBox, QTableWidgetItem, QSpacerItem, \
-    QSizePolicy, QMessageBox, QInputDialog, QTextEdit, QDialog
-from PySide6.QtGui import QShortcut, QKeySequence, QAction, Qt, QFont
+
 from PySide6.QtCore import Qt
-from ui_connection_form import Ui_Connection_Form
+from PySide6.QtGui import QAction, QFont, QKeySequence, QShortcut
+from PySide6.QtWidgets import (
+    QApplication,
+    QComboBox,
+    QDialog,
+    QFileDialog,
+    QInputDialog,
+    QMainWindow,
+    QMessageBox,
+    QSizePolicy,
+    QSpacerItem,
+    QTableWidgetItem,
+    QTextEdit,
+    QWidget,
+)
 from serial.tools import list_ports
-from ui_form import Ui_MainWindow
-from communication import CommunicationManager
-from node_config import NodeManager
-from ui_motor_stats import Ui_Motor_Form
-from ui_record_bus import Ui_Dialog
+
+from ..communication import CommunicationManager
+from ..node_manager import NodeManager
+from .forms.ui_connection_form import Ui_Connection_Form
+from .forms.ui_form import Ui_MainWindow
+from .forms.ui_motor_stats import Ui_Motor_Form
+from .forms.ui_record_bus import Ui_Dialog
 
 logger = logging.getLogger(__name__) # Create Logger
 
@@ -1087,33 +1099,3 @@ class MainWindow(QMainWindow):
     def closeEvent(self, event):
         self.serial.close()
         QApplication.closeAllWindows()
-
-if __name__ == "__main__":
-    logger.setLevel(logging.DEBUG)
-
-    file_handler = RotatingFileHandler('logs/info.log', maxBytes=10240, backupCount=3)
-    file_handler.setLevel(logging.DEBUG)
-
-    console_handler = logging.StreamHandler()
-    console_handler.setLevel(logging.INFO)
-
-    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-
-    file_handler.setFormatter(formatter)
-    console_handler.setFormatter(formatter)
-
-    logger.addHandler(file_handler)
-    logger.addHandler(console_handler)
-
-    logger.info("Application started")
-
-    try:
-        app = QApplication(sys.argv)
-        app.setStyleSheet(Path(f"Diffnes-Gold.qss").read_text())
-        widget = MainWindow(logger)
-        widget.show()
-        sys.exit(app.exec())
-    except Exception as e:
-        logger.exception("Main crashed. Error: %s", e)
-    finally:
-        logger.info("Application shutdown\r\n")
