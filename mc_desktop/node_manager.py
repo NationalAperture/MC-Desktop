@@ -46,6 +46,7 @@ class NodeAdvanced:
     lower: str = "N/A"
     upper: str = "N/A"
     tolerance: str = "N/A"
+    baud_rate: str = "N/A"
 
 
 @dataclass

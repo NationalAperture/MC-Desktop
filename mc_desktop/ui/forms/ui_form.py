@@ -478,27 +478,27 @@ class Ui_MainWindow(object):
 
         self.gridLayout.addWidget(self.label_3, 6, 0, 1, 1)
 
-        self.comboBox = QComboBox(self.groupBox_14)
-        self.comboBox.addItem("")
-        self.comboBox.addItem("")
-        self.comboBox.addItem("")
-        self.comboBox.addItem("")
-        self.comboBox.addItem("")
-        self.comboBox.addItem("")
-        self.comboBox.setObjectName(u"comboBox")
-        sizePolicy2.setHeightForWidth(self.comboBox.sizePolicy().hasHeightForWidth())
-        self.comboBox.setSizePolicy(sizePolicy2)
-        self.comboBox.setFont(font2)
+        self.baud_rates = QComboBox(self.groupBox_14)
+        self.baud_rates.addItem("")
+        self.baud_rates.addItem("")
+        self.baud_rates.addItem("")
+        self.baud_rates.addItem("")
+        self.baud_rates.addItem("")
+        self.baud_rates.addItem("")
+        self.baud_rates.setObjectName(u"baud_rates")
+        sizePolicy2.setHeightForWidth(self.baud_rates.sizePolicy().hasHeightForWidth())
+        self.baud_rates.setSizePolicy(sizePolicy2)
+        self.baud_rates.setFont(font2)
 
-        self.gridLayout.addWidget(self.comboBox, 6, 1, 1, 1)
+        self.gridLayout.addWidget(self.baud_rates, 6, 1, 1, 1)
 
-        self.pushButton = QPushButton(self.groupBox_14)
-        self.pushButton.setObjectName(u"pushButton")
-        sizePolicy6.setHeightForWidth(self.pushButton.sizePolicy().hasHeightForWidth())
-        self.pushButton.setSizePolicy(sizePolicy6)
-        self.pushButton.setFont(font2)
+        self.update_baud_rate_btn = QPushButton(self.groupBox_14)
+        self.update_baud_rate_btn.setObjectName(u"update_baud_rate_btn")
+        sizePolicy6.setHeightForWidth(self.update_baud_rate_btn.sizePolicy().hasHeightForWidth())
+        self.update_baud_rate_btn.setSizePolicy(sizePolicy6)
+        self.update_baud_rate_btn.setFont(font2)
 
-        self.gridLayout.addWidget(self.pushButton, 6, 3, 1, 1)
+        self.gridLayout.addWidget(self.update_baud_rate_btn, 6, 3, 1, 1)
 
 
         self.gridLayout_5.addWidget(self.groupBox_14, 1, 1, 1, 1)
@@ -983,7 +983,7 @@ class Ui_MainWindow(object):
 
         self.retranslateUi(MainWindow)
 
-        self.stackedWidget.setCurrentIndex(0)
+        self.stackedWidget.setCurrentIndex(1)
 
 
         QMetaObject.connectSlotsByName(MainWindow)
@@ -1043,15 +1043,15 @@ class Ui_MainWindow(object):
         self.restore_defualt_values_btn.setText(QCoreApplication.translate("MainWindow", u"Restore Defualt Values", None))
         self.update_pos_tol_btn.setText(QCoreApplication.translate("MainWindow", u"Update", None))
         self.refresh_advanced_btn.setText(QCoreApplication.translate("MainWindow", u"Refresh Advanced Information", None))
-        self.label_3.setText(QCoreApplication.translate("MainWindow", u"Buad Rate:", None))
-        self.comboBox.setItemText(0, QCoreApplication.translate("MainWindow", u"9600", None))
-        self.comboBox.setItemText(1, QCoreApplication.translate("MainWindow", u"14400", None))
-        self.comboBox.setItemText(2, QCoreApplication.translate("MainWindow", u"19200", None))
-        self.comboBox.setItemText(3, QCoreApplication.translate("MainWindow", u"38400", None))
-        self.comboBox.setItemText(4, QCoreApplication.translate("MainWindow", u"57600", None))
-        self.comboBox.setItemText(5, QCoreApplication.translate("MainWindow", u"115200", None))
+        self.label_3.setText(QCoreApplication.translate("MainWindow", u"Baud Rate:", None))
+        self.baud_rates.setItemText(0, QCoreApplication.translate("MainWindow", u"9600", None))
+        self.baud_rates.setItemText(1, QCoreApplication.translate("MainWindow", u"14400", None))
+        self.baud_rates.setItemText(2, QCoreApplication.translate("MainWindow", u"19200", None))
+        self.baud_rates.setItemText(3, QCoreApplication.translate("MainWindow", u"38400", None))
+        self.baud_rates.setItemText(4, QCoreApplication.translate("MainWindow", u"57600", None))
+        self.baud_rates.setItemText(5, QCoreApplication.translate("MainWindow", u"115200", None))
 
-        self.pushButton.setText(QCoreApplication.translate("MainWindow", u"Update", None))
+        self.update_baud_rate_btn.setText(QCoreApplication.translate("MainWindow", u"Update", None))
         self.groupBox_11.setTitle(QCoreApplication.translate("MainWindow", u"Stage", None))
         self.update_gh_btn.setText(QCoreApplication.translate("MainWindow", u"Update", None))
         self.TPI_input.setPlaceholderText(QCoreApplication.translate("MainWindow", u"Enter Turn Per Inch", None))
