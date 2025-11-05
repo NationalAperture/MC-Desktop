@@ -54,3 +54,8 @@ mc_desktop/
     designer/          # source .ui files + Qt Creator project
     forms/             # auto-generated PySide6 wrappers (do not edit)
 ```
+
+## Macro Execution Flow
+- Motion commands queued from the macro UI now opt into completion tracking via the `command_complete` signal emitted by `CommunicationManager` once the axis reports it is stationary.
+- `MacroRunner` waits for that completion notification before dispatching the next macro step, ensuring waits and loops only advance after motion finishes.
+- Loop constructs (`loop n` … `end`) and `wait` commands are evaluated by `MacroRunner`'s state machine so repeated moves are resent only after the transport confirms completion.
