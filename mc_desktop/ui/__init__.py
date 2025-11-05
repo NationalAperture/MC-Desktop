@@ -1,5 +1,10 @@
 """UI components for the MC Desktop application."""
 
-from .main_window import MainWindow
+__all__ = []
 
-__all__ = ["MainWindow"]
+try:  # pragma: no cover - PySide6 may not be installed when running tests
+    from .main_window import MainWindow
+except ModuleNotFoundError:
+    MainWindow = None  # type: ignore[assignment]
+else:
+    __all__.append("MainWindow")
