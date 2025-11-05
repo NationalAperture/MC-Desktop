@@ -261,6 +261,7 @@ class CommunicationManager:
 
     def _update_motion_state(self) -> None:
         try:
+            print("HERE")
             self.check_status()
             while self.in_motion:
                 if not self._command_queue.empty():

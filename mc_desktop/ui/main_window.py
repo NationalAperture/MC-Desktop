@@ -31,6 +31,7 @@ from serial.tools import list_ports
 
 from ..communication import CommunicationManager
 from ..node_manager import NodeManager
+from .controllers import CommandDispatcher, MacroRunner, NodeSettingsController
 from .forms.ui_connection_form import Ui_Connection_Form
 from .forms.ui_form import Ui_MainWindow
 from .forms.ui_motor_stats import Ui_Motor_Form
@@ -56,14 +57,6 @@ def clear_layout(layout, delete_widgets):
             # set to be deleted later
             if delete_widgets:
                 item_to_remove.deleteLater()
-
-def open_file(file_path):
-    try:
-        with open(file_path, "r") as file:
-            content = file.read()
-            return content
-    except FileNotFoundError:
-        logger.error(f"Could not open file {file_path}")
 
 def candidate_ports():
         """
@@ -292,71 +285,73 @@ class MainWindow(QMainWindow):
         self.macro_text = QTextEdit()
         self.macro_text.setFont(QFont("Arial", 15))
         self.ui.macro_group_box.layout().addWidget(self.macro_text, 1, 0, 1, 5)
-        self.macro_list = None
-        self.macro_list_copy = None
-        self.number_of_runs = 1
-        self.loop_iterations = 2
-        self.loop = []
-        self.loop_copy = []
+        self.macros = MacroRunner(self, logger=log or logger)
+        self.settings = NodeSettingsController(self, logger=log or logger)
+        self.command_dispatcher = CommandDispatcher(self, self.send_command, logger=log or logger)
 
         self.current_node_id = None
         self.node_index = {}
 
         # Commands UI
-        self.ui.move_btn.pressed.connect(self.move_cmd)
-        self.ui.front_lmt_btn.pressed.connect(self.forward)
-        self.ui.rear_lmt_btn.pressed.connect(self.backward)
-        self.ui.forward_btn.pressed.connect(self.forward)
-        self.ui.forward_btn.released.connect(self.stop)
-        self.ui.backward_btn.pressed.connect(self.backward)
-        self.ui.backward_btn.released.connect(self.stop)
-        self.ui.stop_btn.pressed.connect(self.stop)
-        self.ui.move_abs_btn.pressed.connect(self.move_abs)
-        self.ui.load_abs_btn.pressed.connect(self.load_abs)
-        self.ui.move_rel_btn.pressed.connect(self.move_rel)
-        self.ui.load_rel_btn.pressed.connect(self.load_rel)
-        self.ui.set_home_btn.clicked.connect(self.set_defined_pos)
+        self._connect_signals(
+            (self.ui.move_btn.pressed, self.move_cmd),
+            (self.ui.front_lmt_btn.pressed, self.forward),
+            (self.ui.rear_lmt_btn.pressed, self.backward),
+            (self.ui.forward_btn.pressed, self.forward),
+            (self.ui.forward_btn.released, self.stop),
+            (self.ui.backward_btn.pressed, self.backward),
+            (self.ui.backward_btn.released, self.stop),
+            (self.ui.stop_btn.pressed, self.stop),
+        )
+        self._connect_signals(
+            (self.ui.move_abs_btn.pressed, lambda: self.command_dispatcher.execute("move_absolute")),
+            (self.ui.load_abs_btn.pressed, lambda: self.command_dispatcher.execute("load_absolute")),
+            (self.ui.move_rel_btn.pressed, lambda: self.command_dispatcher.execute("move_relative")),
+            (self.ui.load_rel_btn.pressed, lambda: self.command_dispatcher.execute("load_relative")),
+            (self.ui.set_home_btn.clicked, lambda: self.command_dispatcher.execute("set_home")),
+        )
 
         # Macro UI
-        self.ui.load_macro_btn.pressed.connect(self.load_macro)
-        self.ui.save_macro_btn.pressed.connect(self.save_macro)
-        self.ui.step_macro_btn.pressed.connect(self.step_through_macro)
-        self.ui.run_macro_btn.pressed.connect(self.run_macro)
-        self.ui.run_once_rb.clicked.connect(self.set_number_of_runs)
-        self.ui.run_variable_rb.clicked.connect(self.set_number_of_runs)
-        self.ui.variable_amount_value.textChanged.connect(self.set_number_of_runs)
+        self._connect_signals(
+            (self.ui.load_macro_btn.pressed, self.macros.load_macro),
+            (self.ui.save_macro_btn.pressed, self.macros.save_macro),
+            (self.ui.step_macro_btn.pressed, self.macros.step_through_macro),
+            (self.ui.run_macro_btn.pressed, self.macros.run_macro),
+            (self.ui.run_once_rb.clicked, self.macros.set_number_of_runs),
+            (self.ui.run_variable_rb.clicked, self.macros.set_number_of_runs),
+            (self.ui.variable_amount_value.textChanged, self.macros.set_number_of_runs),
+        )
 
         # Settings UI
         self.ui.save_config_btn.clicked.connect(self.save_configuration)
         self.ui.load_config_btn.clicked.connect(self.load_configuration)
         self.ui.erase_config_btn.clicked.connect(self.erase_configuration)
 
-        self.ui.refresh_stage_btn.clicked.connect(self.get_stage_values)
-        self.ui.stage_type_combo.currentIndexChanged.connect(self.set_stage_type)
-        self.ui.travel_unit_combo.currentIndexChanged.connect(self.set_unit_travel)
-        self.ui.update_gh_btn.clicked.connect(self.set_stage_gh)
-        self.ui.update_tpi_btn.clicked.connect(self.set_stage_tpi)
-        self.ui.update_cpr_btn.clicked.connect(self.set_stage_cpr)
-
-        self.ui.refresh_pid_btn.clicked.connect(self.get_pid_values)
-        self.ui.kp_update_btn.clicked.connect(self.set_kp)
-        self.ui.ki_update_btn.clicked.connect(self.set_ki)
-        self.ui.kd_update_btn.clicked.connect(self.set_kd)
-        self.ui.int_lmt_update_btn.clicked.connect(self.set_integrator)
-        self.ui.sample_rate_update_btn.clicked.connect(self.set_sample_rate)
-
-        self.ui.refresh_motion_btn.clicked.connect(self.get_motion_values)
-        self.ui.accel_update_btn.clicked.connect(self.set_motion_accel)
-        self.ui.vel_update_btn.clicked.connect(self.set_motion_vel)
-        self.ui.decel_update_btn.clicked.connect(self.set_motion_decel)
-        self.ui.err_update_btn.clicked.connect(self.set_motion_err)
-        self.ui.jog_update_btn.clicked.connect(self.set_jog)
-        self.ui.hs_jog_update_btn.clicked.connect(self.set_hs_jog)
-
-        self.ui.refresh_advanced_btn.clicked.connect(self.get_advanced_values)
-        self.ui.update_lower_btn.clicked.connect(self.set_lower_limit)
-        self.ui.update_upper_btn.clicked.connect(self.set_upper_limit)
-        self.ui.update_pos_tol_btn.clicked.connect(self.set_tolerance)
+        self._connect_signals(
+            (self.ui.refresh_stage_btn.clicked, self.settings.refresh_stage_values),
+            (self.ui.stage_type_combo.currentIndexChanged, self.settings.set_stage_type),
+            (self.ui.travel_unit_combo.currentIndexChanged, self.settings.set_unit_travel),
+            (self.ui.update_gh_btn.clicked, self.settings.set_stage_gh),
+            (self.ui.update_tpi_btn.clicked, self.settings.set_stage_tpi),
+            (self.ui.update_cpr_btn.clicked, self.settings.set_stage_cpr),
+            (self.ui.refresh_pid_btn.clicked, self.settings.refresh_pid_values),
+            (self.ui.kp_update_btn.clicked, self.settings.set_kp),
+            (self.ui.ki_update_btn.clicked, self.settings.set_ki),
+            (self.ui.kd_update_btn.clicked, self.settings.set_kd),
+            (self.ui.int_lmt_update_btn.clicked, self.settings.set_integrator),
+            (self.ui.sample_rate_update_btn.clicked, self.settings.set_sample_rate),
+            (self.ui.refresh_motion_btn.clicked, self.settings.refresh_motion_values),
+            (self.ui.accel_update_btn.clicked, self.settings.set_motion_accel),
+            (self.ui.vel_update_btn.clicked, self.settings.set_motion_vel),
+            (self.ui.decel_update_btn.clicked, self.settings.set_motion_decel),
+            (self.ui.err_update_btn.clicked, self.settings.set_motion_err),
+            (self.ui.jog_update_btn.clicked, self.settings.set_jog),
+            (self.ui.hs_jog_update_btn.clicked, self.settings.set_hs_jog),
+            (self.ui.refresh_advanced_btn.clicked, self.settings.refresh_advanced_values),
+            (self.ui.update_lower_btn.clicked, self.settings.set_lower_limit),
+            (self.ui.update_upper_btn.clicked, self.settings.set_upper_limit),
+            (self.ui.update_pos_tol_btn.clicked, self.settings.set_tolerance),
+        )
         self.ui.update_baud_rate_btn.clicked.connect(self.set_baud_rate)
 
         self.actionConnect = QAction("Connection", self)
@@ -375,36 +370,6 @@ class MainWindow(QMainWindow):
         self.connection.show()
 
     """COMMANDS IMPLEMENTATION"""
-
-    def set_defined_pos(self):
-        value, ok = QInputDialog.getText(self, "Set Home Position", "Enter Home Position")
-        if ok:
-            cmd = ("hom", value)
-            self.send_command(cmd)
-
-    def move_abs(self):
-        value, ok = QInputDialog.getText(self, "Move Absolute", "Where would you like to move?")
-        if ok:
-            cmd = ("mva", value)
-            self.send_command(cmd)
-
-    def load_abs(self):
-        value, ok = QInputDialog.getText(self, "Load Absolute", "Where would you like to load?")
-        if ok:
-            cmd = ("lpa", value)
-            self.send_command(cmd)
-
-    def move_rel(self):
-        value, ok = QInputDialog.getText(self, "Move Relative", "Where would you like to move?")
-        if ok:
-            cmd = ("mvr", value)
-            self.send_command(cmd)
-
-    def load_rel(self):
-        value, ok = QInputDialog.getText(self, "Load Relative", "Where would you like to load?")
-        if ok:
-            cmd = ("lpr", value)
-            self.send_command(cmd)
 
     def move_cmd(self):
         cmd = ("mov",)
@@ -462,156 +427,21 @@ class MainWindow(QMainWindow):
             self.send_command(("ena", "0"), node_id=node_id)
     """END OF SYSTEM IMPLEMENTATION"""
 
-    """MACRO IMPLEMENTATION"""
-    def load_macro(self):
-        file_path, _ = QFileDialog.getOpenFileName(self, "Open File", "macros/", "Text Files (*.txt)")
-        content = self.macro_text.toPlainText()
-        if file_path:
-            new_content = open_file(file_path)
-            content += new_content
-
-        self.macro_text.setPlainText(content)
-
-    def save_macro(self):
-        txt = self.macro_text.toPlainText()
-        file_path, _ = QFileDialog.getSaveFileName(self, "Save Macro", "/macros/", "Text Files (*.txt);;All Files (*)")
-        if file_path:
-            with open(f"{file_path}.txt", "w") as file:
-                file.write(txt)
-
-    def get_macro_text(self):
-        steps = self.macro_text.toPlainText().strip().split("\n")
-        if steps[0] == '' and len(steps) == 1:
-            # This means there was no macro command entered in list
-            return None
-        else:
-            return steps
-
-    def step_through_macro(self):
-        macro_steps = self.get_macro_text()
-        if macro_steps:
-            command = macro_steps[0].split()
-            params = tuple(command)
-            self.log_sent_messages(params)
-            self.serial.transmit_queue(*params)
-            self.repopulate_macro(macro_steps[1:])
-
-    def run_macro(self):
-        #ToDo: When sending a command make sure to set the callback to allow the next command to be sent
-        self.macro_list = self.get_macro_text()
-        if self.macro_list:
-            self.macro_list_copy = self.macro_list.copy()
-            if self.ui.run_variable_rb.isChecked():
-                self.ui.run_count.setText(f"Run Count: 1/{self.number_of_runs}")
-            self.manage_macro()
-
-    def set_number_of_runs(self):
-        if self.ui.run_once_rb.isChecked():
-            self.number_of_runs = 1
-        elif self.ui.run_variable_rb.isChecked():
-            try:
-                self.number_of_runs = int(self.ui.variable_amount_value.text())
-                self.ui.run_count.setText(f"Run Count: 0/{self.number_of_runs}")
-            except ValueError:
-                print("value must be int")
-
-    def reset_macro(self):
-        self.number_of_runs -= 1
-        self.repopulate_macro(self.macro_list_copy)
-        self.macro_list = self.macro_list_copy.copy()
-        if self.ui.run_variable_rb.isChecked():
-            total = int(self.ui.variable_amount_value.text())
-            self.ui.run_count.setText(f"Run Count: {total - self.number_of_runs}/{total}")
-
-    def manage_macro(self, *args, **kwargs):
-        if len(self.macro_list) == 0:
-            self.reset_macro()
-
-        if self.ui.run_forever_rb.isChecked() or self.number_of_runs > 0:
-            self.repopulate_macro(self.macro_list)
-            self.execute_task(macro_tasks=self.macro_list)
-        else:
-            self.set_number_of_runs()
-            return
-
-    def execute_task(self, *args, **kwargs):
-        if "macro_tasks" in kwargs:
-            tasks = kwargs.get("macro_tasks")
-            cmd = tasks.pop(0).rstrip()
-            cmd = tuple(map(str, cmd.split(" ")))
-            if "end" in cmd:
-                print("end is command")
-                cmd = tasks.pop(0).rstrip()
-                cmd = tuple(map(str, cmd.split(" ")))
-            elif "loop" in cmd:
-                self.loop_iterations = int(cmd[1])
-                self.start_loop(tasks)
-                return
-
-            self.callbacks.append(self.manage_macro)
-        elif "loop_tasks" in kwargs:
-            tasks = kwargs.get("loop_tasks")
-            cmd = tasks.pop(0).rstrip()
-            cmd = tuple(map(str, cmd.split(" ")))
-        else:
-            print("No tasks defined")
-            return
-        self.serial.node_id = cmd[0]
-        self.serial.transmit_queue(*cmd, callback=True)
-        self.log_sent_messages(cmd)
-
-    def repopulate_macro(self, macro_steps):
-        macro = ""
-        for macro_step in macro_steps:
-            macro += macro_step + "\n"
-
-        self.macro_text.setText(macro)
-
-    def start_loop(self, tasks):
-        cmd = tasks.pop(0)
-        while "end" not in cmd:
-            self.loop.append(cmd)
-            cmd = tasks.pop(0)
-        self.macro_list.insert(0, cmd)
-        self.loop_copy = self.loop.copy()
-        self.manage_loop()
-
-    def manage_loop(self, *args, **kwargs):
-        if len(self.loop) == 0:
-            self.loop_iterations -= 1
-            if self.loop_iterations >= 1:
-                self.loop = self.loop_copy.copy()
-
-        if self.loop_iterations >= 1:
-            if (self.loop_iterations - 1 == 0) and (len(self.loop) - 1 == 0):
-                self.callbacks.append(self.manage_macro)
-            else:
-                self.callbacks.append(self.manage_loop)
-
-            self.execute_task(loop_tasks=self.loop)
-            self.repopulate_loop()
-
-    def repopulate_loop(self):
-        tasks = self.loop.copy() + self.macro_list.copy()
-        self.repopulate_macro(tasks)
-
-    """END OF MACRO IMPLEMENTATION"""
-
     """ SETTINGS IMPLEMENTATION """
     def selected_node_change(self, node_id, get_values=False):
         if get_values:
             sn, vn = self.node_manager.get_config_values(node_id)
             self.set_serial_number(sn)
             self.set_version_number(vn)
-            stage = self.node_manager.get_stage_values(node_id)
-            self.update_stage_values(stage)
-            pid = self.node_manager.get_pid_values(node_id)
-            self.update_pid_values(pid)
-            motion = self.node_manager.get_motion_values(node_id)
-            self.update_motion_values(motion)
-            self.update_jog_values()
-            advanced = self.node_manager.get_advanced_values(node_id)
-            self.update_advanced_values(advanced)
+            stage = self.settings.snapshot_stage(node_id)
+            self.settings.update_stage_values(stage)
+            pid = self.settings.snapshot_pid(node_id)
+            self.settings.update_pid_values(pid)
+            motion = self.settings.snapshot_motion(node_id)
+            self.settings.update_motion_values(motion)
+            self.settings.update_jog_values()
+            advanced = self.settings.snapshot_advanced(node_id)
+            self.settings.update_advanced_values(advanced)
 
     def set_serial_number(self, serial_number):
         self.ui.SN_label.setText(serial_number)
@@ -640,312 +470,93 @@ class MainWindow(QMainWindow):
         self.send_command(("ecf",))
 
     def get_stage_values(self):
-        self.callbacks.append(self.update_stage_values)
-        self.send_command(("stg",), callback=True)
+        self.settings.refresh_stage_values()
 
     def update_stage_values(self, *args, **kwargs):
-        node_id = self.node_manager.current_node_id
-        node = self.node_manager.get_stage(node_id)
-        stage_type, travel_unt, gh, tpi, cpr = "Linear", "encoder_counts", 0, 0, 0
-        try:
-            values = args[0].split(",")
-            values = [v.strip() for v in values if v.strip()]
-            stage_type, travel_unt, gh, tpi, cpr = values
-        except ValueError as ve:
-            logger.error(f"ValueError in update_stage_values: {ve}. Args: {values}")
-
-        for index in range(self.ui.stage_type_combo.count()):
-            if stage_type == self.ui.stage_type_combo.itemText(index):
-                self.ui.stage_type_combo.setCurrentIndex(index)
-                node.update({"Stage": index})
-
-        for index in range(self.ui.travel_unit_combo.count()):
-            if travel_unt == self.ui.travel_unit_combo.itemText(index):
-                self.ui.travel_unit_combo.setCurrentIndex(index)
-                node.update({"Travel": index})
-
-        self.ui.gh_value_label.setText(f"GH: {gh}")
-        node.update({"GH": gh})
-        self.ui.tpi_value_label.setText(f"TPI: {tpi}")
-        node.update({"TPI": tpi})
-        self.ui.cpr_value_label.setText(f"CPR: {cpr}")
-        node.update({"CPR": cpr})
+        self.settings.update_stage_values(*args, **kwargs)
 
     def update_unit_travel(self, *args, **kwargs):
-        node_id = self.node_manager.current_node_id
-        node = self.node_manager.get_stage(node_id)
-        unit_travel = args[0]
-        for index in range(self.ui.travel_unit_combo.count()):
-            if unit_travel == self.ui.travel_unit_combo.itemText(index):
-                self.ui.travel_unit_combo.setCurrentIndex(index)
-                node.update({"Travel": index})
+        self.settings.update_unit_travel(*args, **kwargs)
 
     def set_stage_type(self):
-        index = self.ui.stage_type_combo.currentIndex() + 1
-        self.send_command((f"sst {index}",))
-        node_id = self.node_manager.current_node_id
-        node = self.node_manager.get_stage(node_id)
-        node.update({"Stage": f"{index}"})
+        self.settings.set_stage_type()
 
     def set_unit_travel(self):
-        index = self.ui.travel_unit_combo.currentIndex() + 1
-        self.send_command((f"sut {index}",))
-        node_id = self.node_manager.current_node_id
-        node = self.node_manager.get_stage(node_id)
-        node.update({"Travel": f"{index}"})
+        self.settings.set_unit_travel()
 
     def set_stage_gh(self):
-        try:
-            gh = int(self.ui.GH_input.text())
-            self.send_command((f"ghr {gh}",))
-            self.ui.gh_value_label.setText(f"GH: {gh}")
-            node_id = self.node_manager.current_node_id
-            node = self.node_manager.get_stage(node_id)
-            node.update({"GH": gh})
-        except ValueError:
-            logger.error(f"Value must be int. Value received: {self.ui.GH_input.text()}")
+        self.settings.set_stage_gh()
 
     def set_stage_tpi(self):
-        try:
-            tpi = int(self.ui.TPI_input.text())
-            self.send_command((f"tpi {tpi}",))
-            self.ui.tpi_value_label.setText(f"TPI: {tpi}")
-            node_id = self.node_manager.current_node_id
-            node = self.node_manager.get_stage(node_id)
-            node.update({"TPI": tpi})
-        except ValueError:
-            logger.error(f"Value must be int. Value received: {self.ui.TPI_input.text()}")
+        self.settings.set_stage_tpi()
 
     def set_stage_cpr(self):
-        try:
-            cpr = int(self.ui.CPR_input.text())
-            self.send_command((f"cpr {cpr}",))
-            self.ui.cpr_value_label.setText(f"CPR: {cpr}")
-            node_id = self.node_manager.current_node_id
-            node = self.node_manager.get_stage(node_id)
-            node.update({"CPR": cpr})
-        except ValueError:
-            logger.error(f"Value must be int. Value received: {self.ui.CPR_input.text()}")
+        self.settings.set_stage_cpr()
 
     def get_pid_values(self):
-        self.callbacks.append(self.update_pid_values)
-        self.send_command(("pid",), callback=True)
+        self.settings.refresh_pid_values()
 
     def update_pid_values(self, *args, **kwargs):
-        node_id = self.node_manager.current_node_id
-        node = self.node_manager.get_pid(node_id)
-        kp, ki, kd, int_lmt, sample = 0, 0, 0, 0, 0
-        try:
-            values = args[0].split(",")
-            values = [v.strip() for v in values if v.strip()]
-            kp, ki, kd, int_lmt, sample = values
-        except ValueError as ve:
-            logger.error(f"ValueError in update_pid_values: {ve}. Args: {args}")
-
-        self.ui.kp_value_label.setText(f"KP: {kp}")
-        node.update({"KP": kp})
-        self.ui.ki_value_label.setText(f"KI: {ki}")
-        node.update({"KI": ki})
-        self.ui.kd_value_label.setText(f"KD: {kd}")
-        node.update({"KD": kd})
-        self.ui.int_lmt_value_label.setText(f"Integrator Lmt: {int_lmt}")
-        node.update({"Int": int_lmt})
-        self.ui.sample_rate_value_label.setText(f"Sample Rate: {sample}")
-        node.update({"Rate": sample})
+        self.settings.update_pid_values(*args, **kwargs)
 
     def set_kp(self):
-        try:
-            kp = float(self.ui.kp_input.text())
-            self.send_command((f"skp {kp}",))
-            self.ui.kp_value_label.setText(f"KP: {kp}")
-            node_id = self.node_manager.current_node_id
-            node = self.node_manager.get_pid(node_id)
-            node.update({"KP": kp})
-        except ValueError:
-            logger.error(f"Value must be int. Value received: {self.ui.kp_input.text()}")
+        self.settings.set_kp()
 
     def set_ki(self):
-        try:
-            ki = float(self.ui.ki_input.text())
-            self.send_command((f"ski {ki}",))
-            self.ui.ki_value_label.setText(f"KI: {ki}")
-            node_id = self.node_manager.current_node_id
-            node = self.node_manager.get_pid(node_id)
-            node.update({"KI": ki})
-        except ValueError:
-            logger.error(f"Value must be int. Value received: {self.ui.ki_input.text()}")
+        self.settings.set_ki()
 
     def set_kd(self):
-        try:
-            kd = float(self.ui.kd_input.text())
-            self.send_command((f"skd {kd}",))
-            self.ui.kd_value_label.setText(f"KD: {kd}")
-            node_id = self.node_manager.current_node_id
-            node = self.node_manager.get_pid(node_id)
-            node.update({"KD": kd})
-        except ValueError:
-            logger.error(f"Value must be int. Value received: {self.ui.kd_input.text()}")
+        self.settings.set_kd()
 
     def set_integrator(self):
-        try:
-            integrator = int(self.ui.int_lmt_input.text())
-            self.send_command((f"ilm {integrator}",))
-            self.ui.int_lmt_value_label.setText(f"Int Lmt: {integrator}")
-            node_id = self.node_manager.current_node_id
-            node = self.node_manager.get_pid(node_id)
-            node.update({"Int": integrator})
-        except ValueError:
-            logger.error(f"Value must be int. Value received: {self.ui.int_lmt_input.text()}")
+        self.settings.set_integrator()
 
     def set_sample_rate(self):
-        try:
-            sample_rate = int(self.ui.sample_rate_input.text())
-            self.send_command((f"spl {sample_rate}",))
-            self.ui.sample_rate_value_label.setText(f"Sample Rate: {sample_rate}")
-            node_id = self.node_manager.current_node_id
-            node = self.node_manager.get_pid(node_id)
-            node.update({"Rate": sample_rate})
-        except ValueError:
-            logger.error(f"Value must be int. Value received: {self.ui.sample_rate_input.text()}")
+        self.settings.set_sample_rate()
 
     def get_motion_values(self):
-        self.callbacks.append(self.update_motion_values)
-        self.send_command(("prf",), callback=True)
+        self.settings.refresh_motion_values()
 
     def update_motion_values(self, *args, **kwargs):
-        accel, vel, decel, err = None, None, None, None
-        node_id = self.node_manager.current_node_id
-        node = self.node_manager.get_motion(node_id)
-        try:
-            values = args[0].split(",")
-            values = [v.strip() for v in values if v.strip()]
-            accel, vel, decel, err = values
-        except ValueError as ve:
-            logger.error(f"Value Error in update_motion_values: {ve}. Values: {values}")
-
-        self.ui.accel_value_label.setText(f"Acceleration: {accel}")
-        node.update({"Accel": accel})
-        self.ui.vel_value_label.setText(f"Velocity: {vel}")
-        node.update({"Velo": vel})
-        self.ui.decel_value_label.setText(f"Deceleration: {decel}")
-        node.update({"Decel": decel})
-        self.ui.err_value_label.setText(f"Error Limit: {err}")
-        node.update({"Error": err})
+        self.settings.update_motion_values(*args, **kwargs)
 
     def update_jog_values(self):
-        node_id = self.node_manager.current_node_id
-        node = self.node_manager.get_motion(node_id)
-        self.ui.jog_label.setText(f"Jog: {node["JogValue"]}")
-        self.ui.hs_jog_label.setText(f"HS Jog: {node["HSValue"]}")
+        self.settings.update_jog_values()
 
     def set_motion_accel(self):
-        try:
-            accel = int(self.ui.accel_input.text())
-            self.send_command((f"acc {accel}",))
-            self.ui.accel_value_label.setText(f"Acceleration: {accel}")
-            node_id = self.node_manager.current_node_id
-            node = self.node_manager.get_motion(node_id)
-            node.update({"Accel": accel})
-        except ValueError:
-            logger.error(f"Value must be int. Value received: {self.ui.accel_input.text()}")
+        self.settings.set_motion_accel()
 
     def set_motion_vel(self):
-        try:
-            vel = int(self.ui.vel_input.text())
-            self.send_command((f"vel {vel}",))
-            self.ui.vel_value_label.setText(f"Velocity: {vel}")
-            node_id = self.node_manager.current_node_id
-            node = self.node_manager.get_motion(node_id)
-            node.update({"Velo": vel})
-        except ValueError:
-            logger.error(f"Value must be int. Value received: {self.ui.vel_input.text()}")
+        self.settings.set_motion_vel()
 
     def set_motion_decel(self):
-        try:
-            decel = int(self.ui.decel_input.text())
-            self.send_command((f"dec {decel}",))
-            self.ui.decel_value_label.setText(f"Deceleration: {decel}")
-            node_id = self.node_manager.current_node_id
-            node = self.node_manager.get_motion(node_id)
-            node.update({"Decel": decel})
-        except ValueError:
-            logger.error(f"Value must be int. Value received: {self.ui.decel_input.text()}")
+        self.settings.set_motion_decel()
 
     def set_motion_err(self):
-        try:
-            err = int(self.ui.err_input.text())
-            self.send_command((f"erl {err}",))
-            self.ui.err_value_label.setText(f"Error Limit: {err}")
-            node_id = self.node_manager.current_node_id
-            node = self.node_manager.get_motion(node_id)
-            node.update({"Error": err})
-        except ValueError:
-            logger.error(f"Value must be int. Value received: {self.ui.err_input.text()}")
+        self.settings.set_motion_err()
 
     def set_jog(self):
-        node = self.node_manager.get_motion(self.comboBox.currentText())
-        try:
-            jog = int(self.ui.jog_input.text())
-            node["JogValue"] = str(jog)
-            self.ui.jog_label.setText(f"Jog: {jog}")
-            motor_stat = self.motor_stats[self.comboBox.currentIndex()]
-            motor_stat.set_jog()
-        except ValueError:
-            logger.error(f"Value must be int. Value received: {self.ui.jog_input.text()}")
+        self.settings.set_jog()
 
     def set_hs_jog(self):
-        node = self.node_manager.get_motion(self.comboBox.currentText())
-        try:
-            hs_jog = int(self.ui.hs_jog_input.text())
-            node["HSValue"] = str(hs_jog)
-            self.ui.hs_jog_label.setText(f"HS Jog: {hs_jog}")
-            motor_stat = self.motor_stats[self.comboBox.currentIndex()]
-            motor_stat.set_jog()
-        except ValueError:
-            logger.error(f"Value must be int. Value received: {self.ui.hs_jog_input.text()}")
+        self.settings.set_hs_jog()
 
     def get_advanced_values(self):
-        self.callbacks.append(self.update_advanced_values)
-        self.send_command(("swl",), callback=True)
+        self.settings.refresh_advanced_values()
 
 
     def update_advanced_values(self, *args, **kwargs):
-        lower, upper = "0", "0"
-        try:
-            print(args)
-            values = args[0].split(",")
-            values = [v.strip() for v in values if v.strip()]
-            lower, upper = values
-        except Exception as e:
-            print(e)
-
-        self.ui.lower_limit_value.setText(f"Lower Limit: {lower}")
-        self.ui.upper_limit_value.setText(f"Upper Limit: {upper}")
+        self.settings.update_advanced_values(*args, **kwargs)
 
 
     def set_lower_limit(self):
-        limit = int(self.ui.lower_limit_input.text())
-        self.send_command((f"sll {limit}",))
-        self.ui.lower_limit_value.setText(f"Lower Limit: {limit}")
-        node_id = self.node_manager.current_node_id
-        node = self.node_manager.get_advanced(node_id)
-        node.update({"Lower": limit})
+        self.settings.set_lower_limit()
 
     def set_upper_limit(self):
-        limit = int(self.ui.upper_limit_input.text())
-        self.send_command((f"slu {limit}",))
-        self.ui.upper_limit_value.setText(f"Upper Limit: {limit}")
-        node_id = self.node_manager.current_node_id
-        node = self.node_manager.get_advanced(node_id)
-        node.update({"Upper": limit})
+        self.settings.set_upper_limit()
 
     def set_tolerance(self):
-        tolerance = int(self.ui.pos_tolerance_input.text())
-        self.send_command((f"tol {tolerance}",))
-        self.ui.pos_tolerance_value.setText(f"Position Tolerance: {tolerance}")
-        node_id = self.node_manager.current_node_id
-        node = self.node_manager.get_advanced(node_id)
-        node.update({"Tolerance": tolerance})
+        self.settings.set_tolerance()
 
     def set_baud_rate(self):
         baud_rate = int(self.ui.baud_rates.currentIndex() + 1)
@@ -1119,6 +730,11 @@ class MainWindow(QMainWindow):
         self.serial.node_id = node_id
         self.node_manager.current_node_id = node_id
         self.selected_node_change(node_id, True)
+
+    @staticmethod
+    def _connect_signals(*connections):
+        for signal, slot in connections:
+            signal.connect(slot)
 
     def send_command(self, command, node_id=None, callback=False):
         if node_id is None:
