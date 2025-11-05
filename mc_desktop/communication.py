@@ -22,6 +22,7 @@ class MySignal(QObject):
     main_thread = Signal(str)
     log = Signal(str)
     poll = Signal(str, str)
+    command_complete = Signal(object, object)
 
 class Worker(QRunnable):
     def __init__(self, fn, *args, **kwargs):
@@ -90,6 +91,8 @@ class SerialCommand:
     command: str
     param: Optional[Any] = None
     callback: bool = False
+    await_completion: bool = False
+    context: Optional[str] = None
 
     def to_wire(self) -> str:
         payload = f"{self.node_id} {self.command}".strip()
@@ -181,7 +184,7 @@ class CommunicationManager:
         self._transport.close()
         self.connection = None
 
-    def transmit_queue(self, node_id, cmd, param=None, callback=False):
+    def transmit_queue(self, node_id, cmd, param=None, *, callback=False, await_completion=False, context=None):
         if cmd is None:
             self.logger.error("Communication command not specified")
             return
@@ -208,6 +211,8 @@ class CommunicationManager:
             command=command_text,
             param=param if param is None else str(param),
             callback=callback,
+            await_completion=await_completion,
+            context=context,
         )
         self._command_queue.put(serial_command)
 
@@ -237,7 +242,7 @@ class CommunicationManager:
                     continue
                 if isinstance(item, SerialCommand):
                     response = self._process_serial_command(item)
-                    if item.callback and response is not None:
+                    if item.callback and not item.await_completion and response is not None:
                         self.signals.main_thread.emit(response)
             except serial.SerialException as exc:
                 self.logger.exception("Serial communication failure: %s", exc)
@@ -256,17 +261,21 @@ class CommunicationManager:
         if response:
             self.signals.log.emit(response)
 
-        self._update_motion_state()
+        status = self._update_motion_state(command.await_completion)
+        if command.await_completion:
+            self.signals.command_complete.emit(command, status)
+        if command.callback and command.await_completion and response is not None:
+            self.signals.main_thread.emit(response)
         return response
 
-    def _update_motion_state(self) -> None:
+    def _update_motion_state(self, await_completion: bool) -> Optional[str]:
+        last_status: Optional[str] = None
         try:
-            print("HERE")
-            self.check_status()
+            last_status = self.check_status()
             while self.in_motion:
-                if not self._command_queue.empty():
+                if not await_completion and not self._command_queue.empty():
                     break
-                self.check_status()
+                last_status = self.check_status()
                 self.poll()
         except serial.SerialException as exc:
             self.logger.exception("Serial error while updating motion state: %s", exc)
@@ -274,6 +283,7 @@ class CommunicationManager:
             self.logger.exception("Unexpected error while polling motion state.")
         finally:
             self.poll()
+        return last_status
 
     def _poll_idle(self) -> None:
         if not self.connection:
@@ -296,22 +306,23 @@ class CommunicationManager:
         if pos:
             self.signals.poll.emit(self.node_id, pos)
 
-    def check_status(self):
+    def check_status(self) -> Optional[str]:
         if not self.connection:
-            return
+            return None
 
         try:
             self._transport.write(f"{self.node_id} sts\r\n")
             status = self._transport.read_line()
         except serial.SerialException as exc:
             self.logger.exception("Failed to check status for node %s: %s", self.node_id, exc)
-            return
+            return None
 
         if not status:
-            return
+            return None
 
         try:
             ascii_value = ord(status[0])
             self.in_motion = bool(0x01 & ascii_value)
         except Exception:
             self.logger.exception("Unable to parse status response '%s' for node %s", status, self.node_id)
+        return status

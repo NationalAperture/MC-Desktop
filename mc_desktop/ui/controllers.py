@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import logging
-from collections import deque
 from dataclasses import dataclass
 from typing import Callable, Dict, Iterable, Optional, Sequence, Tuple
 
@@ -61,6 +60,13 @@ class CommandDispatcher:
         return True
 
 
+@dataclass
+class LoopFrame:
+    start_index: int
+    end_index: int
+    remaining: int
+
+
 class MacroRunner:
     """Encapsulates macro state management and execution helpers."""
 
@@ -70,9 +76,14 @@ class MacroRunner:
         self.macro_list: Optional[Sequence[str]] = None
         self.macro_list_copy: Optional[Sequence[str]] = None
         self.number_of_runs: int = 1
-        self.loop_iterations: int = 2
-        self.loop: deque[str] = deque()
-        self.loop_copy: deque[str] = deque()
+        self._raw_steps: list[str] = []
+        self._loop_bounds: Dict[int, int] = {}
+        self._loop_stack: list[LoopFrame] = []
+        self._current_index: int = 0
+        self._awaiting_completion: bool = False
+        self._runs_completed: int = 0
+        self._total_runs_requested: Optional[int] = None
+        self._active: bool = False
 
     @staticmethod
     def parse_macro_text(text: str) -> Sequence[str]:
@@ -107,20 +118,31 @@ class MacroRunner:
 
     def step_through_macro(self) -> None:
         macro_steps = self.get_macro_text()
-        if macro_steps:
-            command = macro_steps[0].split()
-            params = tuple(command)
-            self.window.log_sent_messages(params)
-            self.window.serial.transmit_queue(*params)
-            self.repopulate_macro(macro_steps[1:])
+        if not macro_steps:
+            return
+        command = macro_steps[0].split()
+        params = tuple(command)
+        self.window.log_sent_messages(params)
+        self.window.serial.transmit_queue(*params)
+        self.repopulate_macro(macro_steps[1:])
 
     def run_macro(self) -> None:
-        self.macro_list = self.get_macro_text()
-        if self.macro_list:
-            self.macro_list_copy = list(self.macro_list)
-            if self.window.ui.run_variable_rb.isChecked():
-                self.window.ui.run_count.setText(f"Run Count: 1/{self.number_of_runs}")
-            self.manage_macro()
+        steps = self.get_macro_text()
+        if not steps:
+            return
+
+        self._active = True
+        self._runs_completed = 0
+        self._prepare_run_state(steps)
+
+        ui = self.window.ui
+        if ui.run_variable_rb.isChecked():
+            self._total_runs_requested = self.number_of_runs
+            ui.run_count.setText(f"Run Count: 1/{self.number_of_runs}")
+        else:
+            self._total_runs_requested = None
+
+        self.manage_macro()
 
     def set_number_of_runs(self, *_: object, **__: object) -> None:
         ui = self.window.ui
@@ -133,95 +155,173 @@ class MacroRunner:
             except ValueError:
                 self.logger.warning("Macro run count must be an integer. Received: %s", ui.variable_amount_value.text())
 
-    def reset_macro(self) -> None:
-        self.number_of_runs -= 1
-        self.repopulate_macro(self.macro_list_copy or [])
-        self.macro_list = list(self.macro_list_copy or [])
-        ui = self.window.ui
-        if ui.run_variable_rb.isChecked():
-            total = int(ui.variable_amount_value.text())
-            ui.run_count.setText(f"Run Count: {total - self.number_of_runs}/{total}")
-
     def manage_macro(self, *_, **__) -> None:
-        if not self.macro_list:
-            self.reset_macro()
+        if not self._active:
+            return
+        if self._awaiting_completion:
+            return
 
-        ui = self.window.ui
-        if ui.run_forever_rb.isChecked() or self.number_of_runs > 0:
-            self.repopulate_macro(self.macro_list or [])
-            self.execute_task(macro_tasks=list(self.macro_list or []))
-        else:
-            self.set_number_of_runs()
+        next_command = self._next_command()
+        if next_command is None:
+            self._handle_run_complete()
+            return
 
-    def execute_task(self, *_, **kwargs) -> None:
-        macro_tasks = kwargs.get("macro_tasks")
-        loop_tasks = kwargs.get("loop_tasks")
-        if macro_tasks:
-            tasks = macro_tasks
-            cmd = tasks.pop(0).rstrip()
-            if cmd.startswith("loop"):
-                value = cmd.split(" ")[1]
-                self.start_loop(tasks, value)
-            elif cmd.startswith("wait"):
-                command = cmd.split()
-                self.window.serial.transmit_queue(*tuple(command), callback=True)
-            else:
-                command = cmd.split()
-                params = tuple(command)
-                self.window.log_sent_messages(params)
-                if len(params) == 3:
-                    node_id, cmd, param = params
-                    self.window.serial.transmit_queue(node_id, cmd, param, callback=True)
-                elif len(params) == 2:
-                    node_id, cmd = params
-                    self.window.serial.transmit_queue(node_id, cmd, callback=True)
-                else:
-                    self.window.serial.transmit_queue(*params, callback=True)
-            self.repopulate_macro(tasks)
-        elif loop_tasks:
-            tasks = loop_tasks
-            cmd = tasks.pop(0)
-            while "end" not in cmd:
-                self.loop.append(cmd)
-                cmd = tasks.pop(0)
-            self.loop_copy = self.loop.copy()
-            self.manage_loop()
+        self._dispatch_command(next_command)
 
-    def start_loop(self, tasks, value) -> None:
-        self.window.ui.run_count.setText(f"Loop Count: {value}")
-        self.loop_iterations = int(value)
-        self.loop = deque()
-        cmd = tasks.pop(0)
-        while "end" not in cmd:
-            self.loop.append(cmd)
-            cmd = tasks.pop(0)
-        self.loop_copy = self.loop.copy()
-        self.manage_loop()
+    def on_command_complete(self, command: object, status: object) -> None:
+        if getattr(command, "context", None) != "macro":
+            return
+        if not self._active:
+            return
 
-    def manage_loop(self, *_, **__) -> None:
-        if len(self.loop) == 0:
-            self.loop_iterations -= 1
-            if self.loop_iterations >= 1:
-                self.loop = self.loop_copy.copy()
-
-        if self.loop_iterations >= 1:
-            if (self.loop_iterations - 1 == 0) and (len(self.loop) - 1 == 0):
-                self.window.callbacks.append(self.manage_macro)
-            else:
-                self.window.callbacks.append(self.manage_loop)
-
-            self.execute_task(loop_tasks=list(self.loop))
-            self.repopulate_loop()
-
-    def repopulate_loop(self) -> None:
-        tasks = list(self.loop.copy()) + list(self.macro_list or [])
-        self.repopulate_macro(tasks)
+        self._awaiting_completion = False
+        self.manage_macro()
 
     def repopulate_macro(self, macro_list: Iterable[str]) -> None:
         self.macro_list = list(macro_list)
         self.window.macro_text.clear()
         for cmd in self.macro_list:
             self.window.macro_text.append(cmd)
+
+    def _prepare_run_state(self, steps: Sequence[str]) -> None:
+        self.macro_list = list(steps)
+        self.macro_list_copy = list(steps)
+        self._raw_steps = list(steps)
+        self._loop_bounds = self._compute_loop_bounds(self._raw_steps)
+        self._loop_stack = []
+        self._current_index = 0
+        self._awaiting_completion = False
+        self.repopulate_macro(self._raw_steps)
+
+    def _compute_loop_bounds(self, steps: Sequence[str]) -> Dict[int, int]:
+        bounds: Dict[int, int] = {}
+        stack: list[int] = []
+        for idx, raw in enumerate(steps):
+            token = raw.strip().lower()
+            if token.startswith("loop"):
+                stack.append(idx)
+            elif token == "end":
+                if not stack:
+                    self.logger.warning("Encountered 'end' without matching 'loop' at index %s", idx)
+                    continue
+                start_idx = stack.pop()
+                bounds[start_idx] = idx
+        if stack:
+            self.logger.warning("Loop(s) without matching 'end': %s", stack)
+        return bounds
+
+    def _next_command(self) -> Optional[str]:
+        steps = self._raw_steps
+        while self._current_index < len(steps):
+            raw = steps[self._current_index]
+            token = raw.strip().lower()
+
+            if token.startswith("loop"):
+                count = self._parse_loop_count(raw)
+                end_idx = self._loop_bounds.get(self._current_index)
+                if end_idx is None:
+                    self.logger.warning("No matching 'end' for loop starting at index %s", self._current_index)
+                    self._current_index += 1
+                    continue
+                if count <= 0:
+                    self.logger.warning("Ignoring non-positive loop count '%s'", raw)
+                    self._current_index = end_idx + 1
+                    continue
+                frame = LoopFrame(start_index=self._current_index + 1, end_index=end_idx, remaining=count)
+                self._loop_stack.append(frame)
+                self._current_index += 1
+                continue
+
+            if token == "end":
+                if not self._loop_stack:
+                    self.logger.warning("Encountered 'end' without active loop at index %s", self._current_index)
+                    self._current_index += 1
+                    continue
+                frame = self._loop_stack[-1]
+                frame.remaining -= 1
+                if frame.remaining > 0:
+                    self._current_index = frame.start_index
+                else:
+                    self._loop_stack.pop()
+                    self._current_index = frame.end_index + 1
+                continue
+
+            self._current_index += 1
+            self._update_macro_display()
+            return raw
+
+        return None
+
+    def _dispatch_command(self, command: str) -> None:
+        parts = command.split()
+        if not parts:
+            return
+
+        self._awaiting_completion = True
+        params: Tuple[str, ...]
+        if len(parts) >= 3:
+            node_id, cmd = parts[0], parts[1]
+            param = " ".join(parts[2:]) if len(parts) > 3 else parts[2]
+            params = (node_id, cmd, param)
+            self.window.log_sent_messages(params)
+            self.window.serial.transmit_queue(
+                node_id,
+                cmd,
+                param,
+                await_completion=True,
+                context="macro",
+            )
+        elif len(parts) == 2:
+            node_id, cmd = parts
+            params = (node_id, cmd)
+            self.window.log_sent_messages(params)
+            self.window.serial.transmit_queue(
+                node_id,
+                cmd,
+                await_completion=True,
+                context="macro",
+            )
+        else:
+            self.logger.warning("Macro command '%s' is incomplete and will be skipped.", command)
+            self._awaiting_completion = False
+            self.manage_macro()
+
+    def _handle_run_complete(self) -> None:
+        ui = self.window.ui
+        if ui.run_forever_rb.isChecked():
+            self._prepare_run_state(self.macro_list_copy or [])
+            self.manage_macro()
+            return
+
+        if ui.run_variable_rb.isChecked():
+            self._runs_completed += 1
+            total = self._total_runs_requested or 0
+            ui.run_count.setText(f"Run Count: {self._runs_completed}/{total}")
+            if self._runs_completed >= total:
+                self._active = False
+                return
+            self._prepare_run_state(self.macro_list_copy or [])
+            next_run = min(self._runs_completed + 1, total)
+            ui.run_count.setText(f"Run Count: {next_run}/{total}")
+            self.manage_macro()
+            return
+
+        self._active = False
+
+    def _parse_loop_count(self, raw: str) -> int:
+        parts = raw.split()
+        if len(parts) < 2:
+            self.logger.warning("Loop command missing count: %s", raw)
+            return 0
+        try:
+            return int(parts[1])
+        except ValueError:
+            self.logger.warning("Invalid loop count '%s'", parts[1])
+            return 0
+
+    def _update_macro_display(self) -> None:
+        remaining = self._raw_steps[self._current_index :]
+        self.repopulate_macro(remaining)
 
 
 class NodeSettingsController:

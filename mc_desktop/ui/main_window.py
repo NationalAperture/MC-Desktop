@@ -286,6 +286,7 @@ class MainWindow(QMainWindow):
         self.macro_text.setFont(QFont("Arial", 15))
         self.ui.macro_group_box.layout().addWidget(self.macro_text, 1, 0, 1, 5)
         self.macros = MacroRunner(self, logger=log or logger)
+        self.serial.signals.command_complete.connect(self.macros.on_command_complete)
         self.settings = NodeSettingsController(self, logger=log or logger)
         self.command_dispatcher = CommandDispatcher(self, self.send_command, logger=log or logger)
 
