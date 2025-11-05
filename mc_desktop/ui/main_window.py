@@ -357,6 +357,7 @@ class MainWindow(QMainWindow):
         self.ui.update_lower_btn.clicked.connect(self.set_lower_limit)
         self.ui.update_upper_btn.clicked.connect(self.set_upper_limit)
         self.ui.update_pos_tol_btn.clicked.connect(self.set_tolerance)
+        self.ui.update_baud_rate_btn.clicked.connect(self.set_baud_rate)
 
         self.actionConnect = QAction("Connection", self)
         self.actionConnect.triggered.connect(self.show_connection)
@@ -945,6 +946,13 @@ class MainWindow(QMainWindow):
         node_id = self.node_manager.current_node_id
         node = self.node_manager.get_advanced(node_id)
         node.update({"Tolerance": tolerance})
+
+    def set_baud_rate(self):
+        baud_rate = int(self.ui.baud_rates.currentIndex() + 1)
+        self.send_command((f"sbr {baud_rate}",))
+        node_id = self.node_manager.current_node_id
+        node = self.node_manager.get_advanced(node_id)
+        node.update({"Baud_Rate": baud_rate})
 
 
     """END OF SETTINGS IMPLEMENTATION """
