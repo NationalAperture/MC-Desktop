@@ -36,30 +36,6 @@ Characterization tests ensure the refactor remains stable:
 uv run python -m unittest discover tests
 ```
 
-## Build
-Create a source and wheel distribution using the project’s `pyproject.toml`:
-```bash
-uv tool install --upgrade build
-uv run python -m build
-```
-The artifacts will appear in the `dist/` directory.
-
-## Project Layout
-```
-mc_desktop/
-  app.py               # bootstrap & logging
-  communication.py     # serial transport and worker threads
-  node_manager.py      # node configuration state
-  ui/
-    designer/          # source .ui files + Qt Creator project
-    forms/             # auto-generated PySide6 wrappers (do not edit)
-```
-
-## Macro Execution Flow
-- Motion commands queued from the macro UI now opt into completion tracking via the `command_complete` signal emitted by `CommunicationManager` once the axis reports it is stationary.
-- `MacroRunner` waits for that completion notification before dispatching the next macro step, ensuring waits and loops only advance after motion finishes.
-- Loop constructs (`loop n` … `end`) and `wait` commands are evaluated by `MacroRunner`'s state machine so repeated moves are resent only after the transport confirms completion.
-
 ## PyInstaller Bundles
 - Install PyInstaller inside the project environment first: `uv pip install pyinstaller`.
 - Use the packaged entry module (`mc_desktop/__main__.py`) so the bundled executable runs `run_app()`.
@@ -86,3 +62,21 @@ mc_desktop/
     mc_desktop/__main__.py
   ```
 - Both commands pull in the Qt plugins bundled with PySide6 and copy everything under `mc_desktop/resources/` (e.g., `.qss` stylesheets). Add extra `--collect-data` flags if you introduce additional resource packages.
+
+## Project Layout
+```
+mc_desktop/
+  app.py               # bootstrap & logging
+  communication.py     # serial transport and worker threads
+  node_manager.py      # node configuration state
+  ui/
+    designer/          # source .ui files + Qt Creator project
+    forms/             # auto-generated PySide6 wrappers (do not edit)
+```
+
+## Macro Execution Flow
+- Motion commands queued from the macro UI now opt into completion tracking via the `command_complete` signal emitted by `CommunicationManager` once the axis reports it is stationary.
+- `MacroRunner` waits for that completion notification before dispatching the next macro step, ensuring waits and loops only advance after motion finishes.
+- Loop constructs (`loop n` … `end`) and `wait` commands are evaluated by `MacroRunner`'s state machine so repeated moves are resent only after the transport confirms completion.
+
+
