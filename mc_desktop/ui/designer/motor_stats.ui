@@ -116,7 +116,7 @@
         </property>
         <item>
          <property name="text">
-          <string>Stop Only</string>
+          <string>Off</string>
          </property>
         </item>
         <item>
@@ -126,7 +126,7 @@
         </item>
         <item>
          <property name="text">
-          <string>Off</string>
+          <string>Stop Only</string>
          </property>
         </item>
        </widget>
