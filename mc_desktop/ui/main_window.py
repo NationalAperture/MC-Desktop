@@ -11,7 +11,7 @@ import logging
 from collections import deque
 from datetime import datetime
 
-from PySide6.QtCore import Qt
+from PySide6.QtCore import Qt, QSettings, QTimer
 from PySide6.QtGui import QAction, QFont, QKeySequence, QShortcut
 from PySide6.QtWidgets import (
     QApplication,
@@ -31,11 +31,13 @@ from serial.tools import list_ports
 
 from ..communication import CommunicationManager
 from ..node_manager import NodeManager
+from ..updater import UpdateChecker
 from .controllers import CommandDispatcher, MacroRunner, NodeSettingsController
 from .forms.ui_connection_form import Ui_Connection_Form
 from .forms.ui_form import Ui_MainWindow
 from .forms.ui_motor_stats import Ui_Motor_Form
 from .forms.ui_record_bus import Ui_Dialog
+from .update_dialog import UpdateDialog
 
 logger = logging.getLogger(__name__) # Create Logger
 
@@ -366,9 +368,32 @@ class MainWindow(QMainWindow):
         self.ui.menubar.addAction(self.actionRecord)
         self.ui.menubar.addAction(self.actionSettings)
 
+        self.update_checker = UpdateChecker(self)
+        self.update_checker.update_available.connect(self._on_update_available)
+        self.update_checker.check_failed.connect(self._on_update_check_failed)
+        QTimer.singleShot(2000, self._check_for_updates)
+
     def show_connection(self):
         self.connection.close()
         self.connection.show()
+
+    def _check_for_updates(self):
+        self.update_checker.check_for_updates()
+
+    def _on_update_available(self, new_version: str, download_url: str):
+        settings = QSettings("NAI", "NAI-Mover")
+        skipped = settings.value("skipped_version", "")
+        if skipped == new_version:
+            return
+
+        dialog = UpdateDialog(new_version, download_url, self)
+        dialog.exec()
+
+        if dialog.skip_checkbox.isChecked():
+            settings.setValue("skipped_version", new_version)
+
+    def _on_update_check_failed(self, error: str):
+        logger.debug("Update check failed: %s", error)
 
     """COMMANDS IMPLEMENTATION"""
 

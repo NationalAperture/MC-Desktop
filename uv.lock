@@ -24,9 +24,9 @@ wheels = [
 
 [[package]]
 name = "mc-desktop"
-version = "0.1.0"
 source = { editable = "." }
 dependencies = [
+    { name = "packaging" },
     { name = "pyinstaller" },
     { name = "pyserial" },
     { name = "pyside6" },
@@ -34,6 +34,7 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [
+    { name = "packaging", specifier = ">=25.0" },
     { name = "pyinstaller", specifier = ">=6.16.0" },
     { name = "pyserial", specifier = ">=3.5" },
     { name = "pyside6", specifier = ">=6.10.0" },
