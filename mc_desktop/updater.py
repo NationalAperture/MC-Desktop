@@ -1,8 +1,14 @@
 """Auto-update checker using GitHub Releases API."""
 
 import logging
+import os
+import sys
+import stat
+import tempfile
+import subprocess
+from pathlib import Path
 from packaging import version
-from PySide6.QtCore import QObject, Signal, QThread
+from PySide6.QtCore import QObject, Signal
 from PySide6.QtNetwork import QNetworkAccessManager, QNetworkRequest, QNetworkReply
 from PySide6.QtCore import QUrl
 import json
@@ -14,6 +20,16 @@ logger = logging.getLogger(__name__)
 # Update this to your repository
 GITHUB_REPO = "NationalAperture/MC-Desktop"
 RELEASES_API_URL = f"https://api.github.com/repos/{GITHUB_REPO}/releases/latest"
+
+
+def get_executable_path() -> Path:
+    """Get the path to the current executable."""
+    if getattr(sys, 'frozen', False):
+        # Running as PyInstaller bundle
+        return Path(sys.executable)
+    else:
+        # Running as script (for development)
+        return Path(__file__).parent.parent / "dist" / "NAI-Mover"
 
 
 class UpdateChecker(QObject):
@@ -97,3 +113,168 @@ class UpdateChecker(QObject):
             self.check_failed.emit(str(e))
         finally:
             reply.deleteLater()
+
+
+class UpdateDownloader(QObject):
+    """Downloads and installs updates from GitHub releases."""
+
+    progress = Signal(int, int)  # bytes_received, bytes_total
+    download_complete = Signal(str)  # path to downloaded file
+    download_failed = Signal(str)  # error message
+    install_complete = Signal()
+    install_failed = Signal(str)
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.manager = QNetworkAccessManager(self)
+        self.reply = None
+        self.download_path = None
+
+    def download(self, url: str):
+        """Start downloading the update."""
+        logger.info(f"Starting download from: {url}")
+
+        # Create temp file for download
+        self.download_path = Path(tempfile.gettempdir()) / "NAI-Mover-update"
+        if sys.platform == "win32":
+            self.download_path = self.download_path.with_suffix(".exe")
+
+        request = QNetworkRequest(QUrl(url))
+        request.setHeader(
+            QNetworkRequest.KnownHeaders.UserAgentHeader,
+            f"NAI-Mover/{__version__}"
+        )
+        # Follow redirects (GitHub uses redirects for release assets)
+        request.setAttribute(
+            QNetworkRequest.Attribute.RedirectPolicyAttribute,
+            QNetworkRequest.RedirectPolicy.NoLessSafeRedirectPolicy
+        )
+
+        self.reply = self.manager.get(request)
+        self.reply.downloadProgress.connect(self._on_progress)
+        self.reply.finished.connect(self._on_finished)
+
+    def _on_progress(self, bytes_received: int, bytes_total: int):
+        """Handle download progress updates."""
+        self.progress.emit(bytes_received, bytes_total)
+
+    def _on_finished(self):
+        """Handle download completion."""
+        if self.reply.error() != QNetworkReply.NetworkError.NoError:
+            error_msg = self.reply.errorString()
+            logger.error(f"Download failed: {error_msg}")
+            self.download_failed.emit(error_msg)
+            self.reply.deleteLater()
+            return
+
+        # Write the downloaded data to file
+        try:
+            data = self.reply.readAll().data()
+            with open(self.download_path, 'wb') as f:
+                f.write(data)
+
+            logger.info(f"Download complete: {self.download_path}")
+            self.download_complete.emit(str(self.download_path))
+
+        except IOError as e:
+            logger.error(f"Failed to save download: {e}")
+            self.download_failed.emit(str(e))
+        finally:
+            self.reply.deleteLater()
+
+    def install(self):
+        """Install the downloaded update by replacing the current executable."""
+        if not self.download_path or not self.download_path.exists():
+            self.install_failed.emit("No download available to install")
+            return
+
+        current_exe = get_executable_path()
+        logger.info(f"Installing update: {self.download_path} -> {current_exe}")
+
+        try:
+            if sys.platform == "win32":
+                # Windows: Can't replace running executable, use a batch script
+                self._install_windows(current_exe)
+            else:
+                # Linux/macOS: Can replace executable directly
+                self._install_unix(current_exe)
+
+        except Exception as e:
+            logger.error(f"Installation failed: {e}")
+            self.install_failed.emit(str(e))
+
+    def _install_unix(self, current_exe: Path):
+        """Install on Linux/macOS by replacing the executable."""
+        backup_path = current_exe.with_suffix(".backup")
+
+        # Backup current executable
+        if current_exe.exists():
+            current_exe.rename(backup_path)
+
+        try:
+            # Move new executable into place
+            self.download_path.rename(current_exe)
+
+            # Make it executable
+            current_exe.chmod(current_exe.stat().st_mode | stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH)
+
+            # Remove backup
+            if backup_path.exists():
+                backup_path.unlink()
+
+            logger.info("Update installed successfully")
+            self.install_complete.emit()
+
+            # Restart the application
+            self._restart_app(current_exe)
+
+        except Exception as e:
+            # Restore backup on failure
+            if backup_path.exists():
+                backup_path.rename(current_exe)
+            raise
+
+    def _install_windows(self, current_exe: Path):
+        """Install on Windows using a batch script that runs after app exits."""
+        batch_path = Path(tempfile.gettempdir()) / "nai_mover_update.bat"
+
+        batch_content = f'''@echo off
+echo Waiting for application to close...
+timeout /t 2 /nobreak >nul
+echo Installing update...
+move /y "{self.download_path}" "{current_exe}"
+if errorlevel 1 (
+    echo Update failed!
+    pause
+    exit /b 1
+)
+echo Update complete, restarting...
+start "" "{current_exe}"
+del "%~f0"
+'''
+        with open(batch_path, 'w') as f:
+            f.write(batch_content)
+
+        # Start the batch script and exit
+        subprocess.Popen(
+            ['cmd', '/c', str(batch_path)],
+            creationflags=subprocess.CREATE_NEW_CONSOLE
+        )
+
+        logger.info("Update batch script started, exiting application")
+        self.install_complete.emit()
+
+        # Exit the application so the batch script can replace it
+        from PySide6.QtWidgets import QApplication
+        QApplication.quit()
+
+    def _restart_app(self, exe_path: Path):
+        """Restart the application after update."""
+        logger.info(f"Restarting application: {exe_path}")
+
+        # Start new instance
+        subprocess.Popen([str(exe_path)])
+
+        # Exit current instance
+        from PySide6.QtWidgets import QApplication
+        QApplication.quit()
