@@ -47,6 +47,7 @@ uv run python -m unittest discover tests
     --windowed \
     --collect-all PySide6 \
     --collect-data mc_desktop.resources \
+    --hidden-import mc_desktop.resources \
     --hidden-import serial.tools.list_ports \
     mc_desktop/__main__.py
   ```
@@ -58,6 +59,7 @@ uv run python -m unittest discover tests
     --windowed \
     --collect-all PySide6 \
     --collect-data mc_desktop.resources \
+    --hidden-import mc_desktop.resources \
     --hidden-import serial.tools.list_ports \
     mc_desktop/__main__.py
   ```
@@ -144,5 +146,4 @@ mc_desktop/
 - Motion commands queued from the macro UI now opt into completion tracking via the `command_complete` signal emitted by `CommunicationManager` once the axis reports it is stationary.
 - `MacroRunner` waits for that completion notification before dispatching the next macro step, ensuring waits and loops only advance after motion finishes.
 - Loop constructs (`loop n` … `end`) and `wait` commands are evaluated by `MacroRunner`'s state machine so repeated moves are resent only after the transport confirms completion.
-
 
