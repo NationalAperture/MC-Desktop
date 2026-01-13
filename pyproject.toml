@@ -17,8 +17,9 @@ mc-desktop = "mc_desktop.app:run_app"
 requires = ["setuptools>=68", "wheel"]
 build-backend = "setuptools.build_meta"
 
-[tool.setuptools]
-packages = ["mc_desktop"]
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["mc_desktop*"]
 
 [tool.setuptools.dynamic]
 version = {attr = "mc_desktop.version.__version__"}
