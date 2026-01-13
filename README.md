@@ -1,6 +1,6 @@
-# MC Desktop
+# MC Desktop (NAI-Mover)
 
-Desktop control panel for MC hardware built with PySide6.
+Desktop control panel for National Aperture, Inc. MC-6 series motion controllers, built with PySide6.
 
 ## Prerequisites
 - Python 3.13 or newer
@@ -63,15 +63,81 @@ uv run python -m unittest discover tests
   ```
 - Both commands pull in the Qt plugins bundled with PySide6 and copy everything under `mc_desktop/resources/` (e.g., `.qss` stylesheets). Add extra `--collect-data` flags if you introduce additional resource packages.
 
+## Automated Releases with GitHub Actions
+
+This project can use GitHub Actions to automatically build and release executables when you push a version tag.
+
+### Setup (One-Time)
+
+1. **Create the workflow directory and file**:
+   ```bash
+   mkdir -p .github/workflows
+   ```
+
+2. **Create `.github/workflows/release.yml`** with the workflow from `UPDATER.md`.
+
+3. **Commit and push the workflow**:
+   ```bash
+   git add .github/workflows/release.yml
+   git commit -m "Add GitHub Actions release workflow"
+   git push origin main
+   ```
+
+### Creating a Release
+
+1. **Update the version** in `mc_desktop/version.py`:
+   ```python
+   __version__ = "0.2.0"
+   ```
+
+2. **Commit the version change**:
+   ```bash
+   git add mc_desktop/version.py
+   git commit -m "Bump version to 0.2.0"
+   git push origin main
+   ```
+
+3. **Create and push a tag** matching the version:
+   ```bash
+   git tag v0.2.0
+   git push origin v0.2.0
+   ```
+
+4. **GitHub Actions automatically**:
+   - Detects the new tag (matching `v*` pattern)
+   - Spins up Windows and Linux build runners
+   - Builds the PyInstaller executable on each platform
+   - Creates a GitHub Release with both executables attached
+   - Generates release notes from commit history
+
+5. **View your release** at: `https://github.com/YOUR-USERNAME/MC-Desktop/releases`
+
+### Monitoring Builds
+
+- Go to your repository → **Actions** tab to see build progress
+- Click on a workflow run to view logs for each job
+- If a build fails, check the logs for error details
+
+### Customizing the Workflow
+
+The workflow in `UPDATER.md` can be modified to:
+- Add macOS builds (use `runs-on: macos-latest`)
+- Include additional build artifacts
+- Run tests before building
+- Add code signing steps
+
 ## Project Layout
 ```
 mc_desktop/
   app.py               # bootstrap & logging
   communication.py     # serial transport and worker threads
   node_manager.py      # node configuration state
+  version.py           # single source of truth for app version
+  updater.py           # GitHub release update checker (see UPDATER.md)
   ui/
     designer/          # source .ui files + Qt Creator project
     forms/             # auto-generated PySide6 wrappers (do not edit)
+    update_dialog.py   # update prompt dialog (see UPDATER.md)
 ```
 
 ## Macro Execution Flow

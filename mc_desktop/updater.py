@@ -44,8 +44,17 @@ class UpdateChecker(QObject):
 
     def _on_response(self, reply: QNetworkReply):
         """Handle the API response."""
+        status_code = reply.attribute(QNetworkRequest.Attribute.HttpStatusCodeAttribute)
+
         if reply.error() != QNetworkReply.NetworkError.NoError:
-            error_msg = reply.errorString()
+            # 404 means no releases exist yet - this is not an error
+            if status_code == 404:
+                logger.info("No releases found on GitHub (this is normal for new repositories)")
+                self.no_update.emit()
+                reply.deleteLater()
+                return
+
+            error_msg = f"{reply.errorString()} (HTTP {status_code})"
             logger.warning(f"Update check failed: {error_msg}")
             self.check_failed.emit(error_msg)
             reply.deleteLater()
