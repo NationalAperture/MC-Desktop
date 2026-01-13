@@ -4,7 +4,7 @@ from PyInstaller.utils.hooks import collect_all
 
 datas = []
 binaries = []
-hiddenimports = ['serial.tools.list_ports']
+hiddenimports = ['serial.tools.list_ports', 'mc_desktop.resources']
 datas += collect_data_files('mc_desktop.resources')
 tmp_ret = collect_all('PySide6')
 datas += tmp_ret[0]; binaries += tmp_ret[1]; hiddenimports += tmp_ret[2]

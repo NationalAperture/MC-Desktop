@@ -35,6 +35,7 @@ uv run pyinstaller \
   --windowed \
   --collect-all PySide6 \
   --collect-data mc_desktop.resources \
+  --hidden-import mc_desktop.resources \
   --hidden-import serial.tools.list_ports \
   mc_desktop/__main__.py
 ```
@@ -49,6 +50,7 @@ uv run pyinstaller `
   --windowed `
   --collect-all PySide6 `
   --collect-data mc_desktop.resources `
+  --hidden-import mc_desktop.resources `
   --hidden-import serial.tools.list_ports `
   mc_desktop/__main__.py
 ```
