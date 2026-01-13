@@ -116,12 +116,12 @@
         </property>
         <item>
          <property name="text">
-          <string>Offset Stage</string>
+          <string>Stop Only</string>
          </property>
         </item>
         <item>
          <property name="text">
-          <string>Stop Only</string>
+          <string>Offset Stage</string>
          </property>
         </item>
         <item>

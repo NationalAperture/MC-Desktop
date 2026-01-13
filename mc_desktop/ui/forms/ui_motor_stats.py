@@ -98,8 +98,8 @@ class Ui_Motor_Form(object):
         self.enable_drive_cb.setText(QCoreApplication.translate("Motor_Form", u"Enable Drive", None))
         self.hs_jog_cb.setText(QCoreApplication.translate("Motor_Form", u"HS Jog", None))
         self.label.setText(QCoreApplication.translate("Motor_Form", u"<html><head/><body><p>Limit Behavior: </p></body></html>", None))
-        self.limit_behavior_cb.setItemText(0, QCoreApplication.translate("Motor_Form", u"Offset Stage", None))
-        self.limit_behavior_cb.setItemText(1, QCoreApplication.translate("Motor_Form", u"Stop Only", None))
+        self.limit_behavior_cb.setItemText(0, QCoreApplication.translate("Motor_Form", u"Stop Only", None))
+        self.limit_behavior_cb.setItemText(1, QCoreApplication.translate("Motor_Form", u"Offset Stage", None))
         self.limit_behavior_cb.setItemText(2, QCoreApplication.translate("Motor_Form", u"Off", None))
 
     # retranslateUi
