@@ -87,22 +87,33 @@ class UpdateChecker(QObject):
             # Compare versions
             if version.parse(latest_version) > version.parse(self.current_version):
                 # Find the appropriate download URL for this platform
-                download_url = data.get("html_url", "")
+                html_url = data.get("html_url", "")
+                download_url = None
 
-                # Optionally find platform-specific asset
+                # Find platform-specific asset
                 assets = data.get("assets", [])
                 for asset in assets:
                     name = asset.get("name", "").lower()
-                    # Adjust these conditions based on your asset naming
-                    import sys
-                    if sys.platform == "win32" and "windows" in name:
-                        download_url = asset.get("browser_download_url", download_url)
-                        break
-                    elif sys.platform == "linux" and "linux" in name:
-                        download_url = asset.get("browser_download_url", download_url)
-                        break
+                    asset_url = asset.get("browser_download_url", "")
 
-                logger.info(f"Update available: {latest_version}")
+                    if sys.platform == "win32":
+                        # Match: NAI-Mover-windows.exe, NAI-Mover.exe, or anything with .exe
+                        if name.endswith(".exe"):
+                            download_url = asset_url
+                            if "windows" in name:
+                                break  # Prefer explicitly named windows build
+                    elif sys.platform == "linux":
+                        # Match: NAI-Mover-linux, NAI-Mover, or anything without .exe
+                        if not name.endswith(".exe") and "NAI-Mover" in asset.get("name", ""):
+                            download_url = asset_url
+                            if "linux" in name:
+                                break  # Prefer explicitly named linux build
+
+                if not download_url:
+                    logger.warning(f"No matching asset found for platform {sys.platform}, using release page")
+                    download_url = html_url
+
+                logger.info(f"Update available: {latest_version}, download: {download_url}")
                 self.update_available.emit(latest_version, download_url)
             else:
                 logger.info("No update available")

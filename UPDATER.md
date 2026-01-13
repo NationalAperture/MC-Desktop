@@ -103,12 +103,17 @@ jobs:
           name: NAI-Mover-linux
           path: ./linux
 
+      - name: Rename artifacts with platform suffix
+        run: |
+          mv ./windows/NAI-Mover.exe ./windows/NAI-Mover-windows.exe
+          mv ./linux/NAI-Mover ./linux/NAI-Mover-linux
+
       - name: Create Release
         uses: softprops/action-gh-release@v2
         with:
           files: |
-            ./windows/NAI-Mover.exe
-            ./linux/NAI-Mover
+            ./windows/NAI-Mover-windows.exe
+            ./linux/NAI-Mover-linux
           generate_release_notes: true
 ```
 
