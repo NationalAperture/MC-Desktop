@@ -12,7 +12,7 @@ from mc_desktop.version import __version__
 logger = logging.getLogger(__name__)
 
 # Update this to your repository
-GITHUB_REPO = "your-username/MC-Desktop"
+GITHUB_REPO = "NationalAperture/MC-Desktop"
 RELEASES_API_URL = f"https://api.github.com/repos/{GITHUB_REPO}/releases/latest"
 
 
