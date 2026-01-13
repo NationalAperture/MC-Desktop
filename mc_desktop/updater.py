@@ -35,7 +35,7 @@ def get_executable_path() -> Path:
 class UpdateChecker(QObject):
     """Checks GitHub for new releases."""
 
-    update_available = Signal(str, str)  # new_version, download_url
+    update_available = Signal(str, str, str)  # new_version, download_url, release_notes
     no_update = Signal()
     check_failed = Signal(str)  # error_message
 
@@ -113,8 +113,9 @@ class UpdateChecker(QObject):
                     logger.warning(f"No matching asset found for platform {sys.platform}, using release page")
                     download_url = html_url
 
+                release_notes = data.get("body", "")
                 logger.info(f"Update available: {latest_version}, download: {download_url}")
-                self.update_available.emit(latest_version, download_url)
+                self.update_available.emit(latest_version, download_url, release_notes)
             else:
                 logger.info("No update available")
                 self.no_update.emit()
