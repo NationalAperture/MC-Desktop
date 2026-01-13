@@ -19,6 +19,7 @@ from PySide6.QtWidgets import (
     QDialog,
     QFileDialog,
     QInputDialog,
+    QLabel,
     QMainWindow,
     QMessageBox,
     QSizePolicy,
@@ -32,6 +33,7 @@ from serial.tools import list_ports
 from ..communication import CommunicationManager
 from ..node_manager import NodeManager
 from ..updater import UpdateChecker
+from ..version import __version__
 from .controllers import CommandDispatcher, MacroRunner, NodeSettingsController
 from .forms.ui_connection_form import Ui_Connection_Form
 from .forms.ui_form import Ui_MainWindow
@@ -372,6 +374,9 @@ class MainWindow(QMainWindow):
         self.update_checker.update_available.connect(self._on_update_available)
         self.update_checker.check_failed.connect(self._on_update_check_failed)
         QTimer.singleShot(2000, self._check_for_updates)
+
+        version_label = QLabel(f"v{__version__}")
+        self.ui.statusbar.addPermanentWidget(version_label)
 
     def show_connection(self):
         self.connection.close()
