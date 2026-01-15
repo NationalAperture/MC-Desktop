@@ -112,7 +112,7 @@ class CommunicationManager:
 
     def __init__(self, parent, logger):
         self.logger = logger
-        self.threadpool: Optional[QThreadPool] = None
+        self.threadpool: Optional[QThreadPool] = QThreadPool.globalInstance()
         self.port = None
         self.baudrate = None
         self.parent = parent
@@ -177,7 +177,7 @@ class CommunicationManager:
         if self._alive:
             return
         if self.threadpool is None:
-            self.threadpool = QThreadPool()
+            self.threadpool = QThreadPool.globalInstance()
         worker_0 = Worker(self.transmit)
         # worker_1 = Worker(self.send_cmd)
         self._alive = True
