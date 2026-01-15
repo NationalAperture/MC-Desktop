@@ -610,17 +610,23 @@ class NodeSettingsController:
         self.window.send_command(("swl",), callback=True)
 
     def update_advanced_values(self, *args, **__) -> None:
+        node_manager = self.window.node_manager
+        node_id = node_manager.current_node_id
+        node = node_manager.get_advanced(node_id)
         lower, upper = "0", "0"
         try:
             values = args[0].split(",")
             values = [v.strip() for v in values if v.strip()]
-            lower, upper = values
+            lower, upper = values[0], values[1]
         except Exception as exc:
             self.logger.error("Failed to parse advanced values: %s", exc)
 
+
         ui = self.window.ui
         ui.lower_limit_value.setText(f"Lower Limit: {lower}")
+        node.update({"Lower": lower})
         ui.upper_limit_value.setText(f"Upper Limit: {upper}")
+        node.update({"Upper": upper})
 
     def set_lower_limit(self) -> None:
         limit = int(self.window.ui.lower_limit_input.text())

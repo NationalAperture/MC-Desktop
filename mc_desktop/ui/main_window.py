@@ -176,9 +176,11 @@ class MotorStats(QWidget):
         self.ui.limit_behavior_cb.currentIndexChanged.connect(self.limit_behavior_updated)
 
     def set_limit_behavior(self, behavior):
+        self.ui.limit_behavior_cb.blockSignals(True)
         for index in range(self.ui.limit_behavior_cb.count()):
             if behavior == self.ui.limit_behavior_cb.itemText(index):
                 self.ui.limit_behavior_cb.setCurrentIndex(index)
+        self.ui.limit_behavior_cb.blockSignals(False)
 
     def limit_behavior_updated(self):
         index = self.ui.limit_behavior_cb.currentIndex() + 1
@@ -687,7 +689,7 @@ class MainWindow(QMainWindow):
 
     def set_software_limits(self, limits):
         self.update_advanced_values(limits)
-        pass
+
 
     def update_node_motor_values(self, node_id, values):
         node_index = self.node_index.get(node_id)
