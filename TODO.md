@@ -65,7 +65,7 @@
 
 ## Documentation Improvements
 
-- [ ] **Add API documentation**: Document the serial command protocol for the MC-6 controller.
-- [ ] **Add developer setup guide**: Include instructions for setting up a development environment and running tests.
-- [ ] **Add architecture diagram**: Visual representation of the component interactions.
-- [ ] **Document macro syntax**: Create a user-facing guide for macro commands (loop, end, sleep, etc.).
+- [x] **Add API documentation**: Document the serial command protocol for the MC-6 controller (`docs/API.md`).
+- [x] **Add developer setup guide**: Include instructions for setting up a development environment and running tests (`docs/DEVELOPER.md`).
+- [x] **Add architecture diagram**: Visual representation of the component interactions (`docs/ARCHITECTURE.md`).
+- [x] **Document macro syntax**: Create a user-facing guide for macro commands (loop, end, sleep, etc.) (`docs/MACRO_SYNTAX.md`).
