@@ -37,6 +37,7 @@ from .forms.ui_form import Ui_MainWindow
 from .update_dialog import UpdateDialog
 
 logger = logging.getLogger(__name__) # Create Logger
+COM_BUS_MAX_ROWS = 1000
 
 def clear_layout(layout, delete_widgets):
     for i in reversed(range(layout.count())):
@@ -285,6 +286,7 @@ class MainWindow(QMainWindow):
         self.ui.system_monitor.layout().addItem(self.verticalSpacer)
         self.setWindowTitle("NAI Mover")
         self.column_count = self.ui.com_bus_table.columnCount()
+        self.com_bus_max_rows = COM_BUS_MAX_ROWS
         self.comboBox = QComboBox()
         self.comboBox.setFont(QFont("Arial", 15))
         self.comboBox.currentIndexChanged.connect(self.selected_new_node)
@@ -301,6 +303,8 @@ class MainWindow(QMainWindow):
 
         self.current_node_id = None
         self.node_index = {}
+
+
 
         # Commands UI
         self._connect_signals(
@@ -792,6 +796,7 @@ class MainWindow(QMainWindow):
         for item in items:
             self.ui.com_bus_table.setItem(0, col, QTableWidgetItem(item))
             col += 1
+        self._trim_com_bus_table()
 
     def log_received_messages(self, message):
         self.ui.com_bus_table.insertRow(0)
@@ -800,6 +805,11 @@ class MainWindow(QMainWindow):
         for col, value in zip(range(self.column_count), items):
             item = QTableWidgetItem(str(value))
             self.ui.com_bus_table.setItem(0, col, item)
+        self._trim_com_bus_table()
+
+    def _trim_com_bus_table(self):
+        while self.ui.com_bus_table.rowCount() > self.com_bus_max_rows:
+            self.ui.com_bus_table.removeRow(self.ui.com_bus_table.rowCount() - 1)
 
     def closeEvent(self, event):
         self.serial.close()
