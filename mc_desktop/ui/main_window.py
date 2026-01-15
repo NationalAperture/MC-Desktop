@@ -385,13 +385,13 @@ class MainWindow(QMainWindow):
     def _check_for_updates(self):
         self.update_checker.check_for_updates()
 
-    def _on_update_available(self, new_version: str, download_url: str):
+    def _on_update_available(self, new_version: str, download_url: str, release_notes: str):
         settings = QSettings("NAI", "NAI-Mover")
         skipped = settings.value("skipped_version", "")
         if skipped == new_version:
             return
 
-        dialog = UpdateDialog(new_version, download_url, self)
+        dialog = UpdateDialog(new_version, download_url, release_notes, self)
         dialog.exec()
 
         if dialog.skip_checkbox.isChecked():

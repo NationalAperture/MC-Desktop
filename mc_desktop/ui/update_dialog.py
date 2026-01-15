@@ -2,7 +2,7 @@
 
 from PySide6.QtWidgets import (
     QDialog, QVBoxLayout, QLabel, QPushButton,
-    QHBoxLayout, QCheckBox, QProgressBar, QMessageBox
+    QHBoxLayout, QCheckBox, QProgressBar, QMessageBox, QTextBrowser
 )
 from PySide6.QtCore import Qt, QSettings
 from PySide6.QtGui import QDesktopServices
@@ -14,13 +14,14 @@ from mc_desktop.updater import UpdateDownloader
 class UpdateDialog(QDialog):
     """Dialog prompting user to update the application."""
 
-    def __init__(self, new_version: str, download_url: str, parent=None):
+    def __init__(self, new_version: str, download_url: str, release_notes: str = "", parent=None):
         super().__init__(parent)
         self.download_url = download_url
         self.new_version = new_version
         self.setWindowTitle("Update Available")
         self.setModal(True)
-        self.setMinimumWidth(400)
+        self.setMinimumWidth(450)
+        self.setMinimumHeight(350)
 
         # Downloader
         self.downloader = UpdateDownloader(self)
@@ -36,11 +37,21 @@ class UpdateDialog(QDialog):
         self.message = QLabel(
             f"A new version of NAI-Mover is available!\n\n"
             f"New version: {new_version}\n"
-            f"Your version: {self._get_current_version()}\n\n"
-            f"Would you like to download and install the update?"
+            f"Your version: {self._get_current_version()}"
         )
         self.message.setWordWrap(True)
         layout.addWidget(self.message)
+
+        # Release notes
+        if release_notes:
+            notes_label = QLabel("What's New:")
+            layout.addWidget(notes_label)
+
+            self.release_notes = QTextBrowser()
+            self.release_notes.setMarkdown(release_notes)
+            self.release_notes.setOpenExternalLinks(True)
+            self.release_notes.setMaximumHeight(150)
+            layout.addWidget(self.release_notes)
 
         # Progress bar (hidden initially)
         self.progress_bar = QProgressBar()
