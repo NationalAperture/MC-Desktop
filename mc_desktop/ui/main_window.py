@@ -33,7 +33,10 @@ from ..node_manager import NodeManager
 from ..updater import UpdateChecker
 from ..version import __version__
 from .controllers import CommandDispatcher, MacroRunner, NodeSettingsController
+from .forms.ui_connection_form import Ui_Connection_Form
 from .forms.ui_form import Ui_MainWindow
+from .forms.ui_motor_stats import Ui_Motor_Form
+from .forms.ui_record_bus import Ui_Dialog as Ui_RecordBus_Dialog
 from .update_dialog import UpdateDialog
 
 logger = logging.getLogger(__name__) # Create Logger
@@ -90,8 +93,6 @@ def candidate_ports():
 class Connection(QWidget):
     def __init__(self, parent=None):
         super().__init__()
-        from .forms.ui_connection_form import Ui_Connection_Form
-
         self.ui = Ui_Connection_Form()
         self.ui.setupUi(self)
         self.__setup__(parent)
@@ -158,8 +159,6 @@ class Connection(QWidget):
 class MotorStats(QWidget):
     def __init__(self, parent, title):
         super().__init__()
-        from .forms.ui_motor_stats import Ui_Motor_Form
-
         self.ui = Ui_Motor_Form()
         self.ui.setupUi(self)
         self.node_id = None
@@ -229,9 +228,7 @@ class MotorStats(QWidget):
 class RecordBus(QDialog):
     def __init__(self, parent=None):
         super().__init__(parent)
-        from .forms.ui_record_bus import Ui_Dialog
-
-        self.ui = Ui_Dialog()
+        self.ui = Ui_RecordBus_Dialog()
         self.ui.setupUi(self)
         self.__setup__(parent)
 
