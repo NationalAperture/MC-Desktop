@@ -16,7 +16,7 @@
 - [ ] **Lazy-load UI forms**: `Connection`, `MotorStats`, `RecordBus` import their UI forms inside `__init__`. Move imports to module level for faster subsequent instantiation.
 - [x] **Throttle position updates**: `update_node_motor_values()` in `main_window.py:694` updates the UI on every poll. Add a debounce/throttle to reduce unnecessary repaints during rapid motion.
 - [x] **Use QThreadPool max thread count**: `CommunicationManager` creates its own `QThreadPool` but doesn't configure thread limits. Consider reusing `QThreadPool.globalInstance()` or setting appropriate limits.
-- [ ] **Cache stylesheet**: `_apply_stylesheet()` in `app.py:47` reads the QSS file on every launch. Consider caching or embedding the stylesheet as a Python string constant.
+- [x] **Cache stylesheet**: `_apply_stylesheet()` in `app.py:47` reads the QSS file on every launch. Consider caching or embedding the stylesheet as a Python string constant.
 - [x] **Limit com_bus_table row count**: `log_sent_messages()` and `log_received_messages()` insert rows indefinitely into the table widget. Add a max row limit to prevent memory growth during long sessions.
 
 ## UI/UX Improvements
