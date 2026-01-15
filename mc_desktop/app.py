@@ -64,9 +64,10 @@ def run_app() -> int:
         from .ui import MainWindow
 
         app = QApplication(sys.argv)
-        _apply_stylesheet(app)
         window = MainWindow(logger)
         window.show()
+        app.processEvents()
+        _apply_stylesheet(app)
         return app.exec()
     except Exception as exc:  # pragma: no cover - surface to caller/log
         logger.exception("Main crashed. Error: %s", exc)

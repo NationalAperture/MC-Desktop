@@ -28,17 +28,12 @@ from PySide6.QtWidgets import (
     QTextEdit,
     QWidget,
 )
-from serial.tools import list_ports
-
 from ..communication import CommunicationManager
 from ..node_manager import NodeManager
 from ..updater import UpdateChecker
 from ..version import __version__
 from .controllers import CommandDispatcher, MacroRunner, NodeSettingsController
-from .forms.ui_connection_form import Ui_Connection_Form
 from .forms.ui_form import Ui_MainWindow
-from .forms.ui_motor_stats import Ui_Motor_Form
-from .forms.ui_record_bus import Ui_Dialog
 from .update_dialog import UpdateDialog
 
 logger = logging.getLogger(__name__) # Create Logger
@@ -66,6 +61,8 @@ def candidate_ports():
         """
         Return a list of serial port candidates across Windows, Linux, and macOS.
         """
+        from serial.tools import list_ports
+
         ports = []
         for port in list_ports.comports():
             dev = port.device  # actual device name, like "COM3" or "/dev/ttyUSB0"
@@ -91,6 +88,8 @@ def candidate_ports():
 class Connection(QWidget):
     def __init__(self, parent=None):
         super().__init__()
+        from .forms.ui_connection_form import Ui_Connection_Form
+
         self.ui = Ui_Connection_Form()
         self.ui.setupUi(self)
         self.__setup__(parent)
@@ -157,6 +156,8 @@ class Connection(QWidget):
 class MotorStats(QWidget):
     def __init__(self, parent, title):
         super().__init__()
+        from .forms.ui_motor_stats import Ui_Motor_Form
+
         self.ui = Ui_Motor_Form()
         self.ui.setupUi(self)
         self.node_id = None
@@ -224,6 +225,8 @@ class MotorStats(QWidget):
 class RecordBus(QDialog):
     def __init__(self, parent=None):
         super().__init__(parent)
+        from .forms.ui_record_bus import Ui_Dialog
+
         self.ui = Ui_Dialog()
         self.ui.setupUi(self)
         self.__setup__(parent)
@@ -268,8 +271,8 @@ class MainWindow(QMainWindow):
         self.__setup__(log)
 
     def __setup__(self, log):
-        self.connection = Connection(self)
-        self.record = RecordBus(self)
+        self.connection = None
+        self.record = None
         self.serial = CommunicationManager(self, log)
         self.serial.signals.log.connect(self.log_received_messages)
         self.serial.signals.main_thread.connect(self.manage_callback)
@@ -373,12 +376,14 @@ class MainWindow(QMainWindow):
         self.update_checker = UpdateChecker(self)
         self.update_checker.update_available.connect(self._on_update_available)
         self.update_checker.check_failed.connect(self._on_update_check_failed)
-        QTimer.singleShot(2000, self._check_for_updates)
+        QTimer.singleShot(5000, self._check_for_updates)
 
         version_label = QLabel(f"v{__version__}")
         self.ui.statusbar.addPermanentWidget(version_label)
 
     def show_connection(self):
+        if self.connection is None:
+            self.connection = Connection(self)
         self.connection.close()
         self.connection.show()
 
