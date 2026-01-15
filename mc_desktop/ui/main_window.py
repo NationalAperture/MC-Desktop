@@ -38,6 +38,7 @@ from .update_dialog import UpdateDialog
 
 logger = logging.getLogger(__name__) # Create Logger
 COM_BUS_MAX_ROWS = 1000
+MOTOR_UPDATE_THROTTLE_MS = 100
 
 def clear_layout(layout, delete_widgets):
     for i in reversed(range(layout.count())):
@@ -287,6 +288,11 @@ class MainWindow(QMainWindow):
         self.setWindowTitle("NAI Mover")
         self.column_count = self.ui.com_bus_table.columnCount()
         self.com_bus_max_rows = COM_BUS_MAX_ROWS
+        self._pending_motor_updates = {}
+        self._motor_update_timer = QTimer(self)
+        self._motor_update_timer.setSingleShot(True)
+        self._motor_update_timer.setInterval(MOTOR_UPDATE_THROTTLE_MS)
+        self._motor_update_timer.timeout.connect(self._flush_pending_motor_updates)
         self.comboBox = QComboBox()
         self.comboBox.setFont(QFont("Arial", 15))
         self.comboBox.currentIndexChanged.connect(self.selected_new_node)
@@ -696,6 +702,22 @@ class MainWindow(QMainWindow):
 
 
     def update_node_motor_values(self, node_id, values):
+        self._pending_motor_updates[node_id] = values
+        if self._motor_update_timer.isActive():
+            return
+        self._apply_motor_update(node_id, values)
+        self._pending_motor_updates.pop(node_id, None)
+        self._motor_update_timer.start()
+
+    def _flush_pending_motor_updates(self):
+        pending = self._pending_motor_updates
+        self._pending_motor_updates = {}
+        for node_id, values in pending.items():
+            self._apply_motor_update(node_id, values)
+        if self._pending_motor_updates:
+            self._motor_update_timer.start()
+
+    def _apply_motor_update(self, node_id, values):
         node_index = self.node_index.get(node_id)
         if node_index is not None and node_index >= 0:
             motor_stat = self.motor_stats[node_index]
