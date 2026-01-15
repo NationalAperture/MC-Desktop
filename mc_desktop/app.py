@@ -15,6 +15,7 @@ if TYPE_CHECKING:
 
 LOGGER_NAME = "mc_desktop"
 STYLESHEET_NAME = "Diffnes-Gold.qss"
+_STYLESHEET_CACHE: Optional[str] = None
 
 
 def configure_logging(log_directory: Optional[Path] = None) -> logging.Logger:
@@ -46,12 +47,17 @@ def configure_logging(log_directory: Optional[Path] = None) -> logging.Logger:
 
 def _apply_stylesheet(app: "QApplication") -> None:
     """Apply the packaged Qt stylesheet if it exists."""
+    global _STYLESHEET_CACHE
+    if _STYLESHEET_CACHE is not None:
+        app.setStyleSheet(_STYLESHEET_CACHE)
+        return
     try:
         stylesheet = resources.files("mc_desktop.resources").joinpath(STYLESHEET_NAME).read_text(encoding="utf-8")
     except (FileNotFoundError, ModuleNotFoundError):
         logging.getLogger(LOGGER_NAME).warning("Stylesheet %s not found in resources package", STYLESHEET_NAME)
         return
 
+    _STYLESHEET_CACHE = stylesheet
     app.setStyleSheet(stylesheet)
 
 

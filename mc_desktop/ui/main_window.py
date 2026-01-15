@@ -33,10 +33,15 @@ from ..node_manager import NodeManager
 from ..updater import UpdateChecker
 from ..version import __version__
 from .controllers import CommandDispatcher, MacroRunner, NodeSettingsController
+from .forms.ui_connection_form import Ui_Connection_Form
 from .forms.ui_form import Ui_MainWindow
+from .forms.ui_motor_stats import Ui_Motor_Form
+from .forms.ui_record_bus import Ui_Dialog as Ui_RecordBus_Dialog
 from .update_dialog import UpdateDialog
 
 logger = logging.getLogger(__name__) # Create Logger
+COM_BUS_MAX_ROWS = 1000
+MOTOR_UPDATE_THROTTLE_MS = 100
 
 def clear_layout(layout, delete_widgets):
     for i in reversed(range(layout.count())):
@@ -88,8 +93,6 @@ def candidate_ports():
 class Connection(QWidget):
     def __init__(self, parent=None):
         super().__init__()
-        from .forms.ui_connection_form import Ui_Connection_Form
-
         self.ui = Ui_Connection_Form()
         self.ui.setupUi(self)
         self.__setup__(parent)
@@ -156,8 +159,6 @@ class Connection(QWidget):
 class MotorStats(QWidget):
     def __init__(self, parent, title):
         super().__init__()
-        from .forms.ui_motor_stats import Ui_Motor_Form
-
         self.ui = Ui_Motor_Form()
         self.ui.setupUi(self)
         self.node_id = None
@@ -227,9 +228,7 @@ class MotorStats(QWidget):
 class RecordBus(QDialog):
     def __init__(self, parent=None):
         super().__init__(parent)
-        from .forms.ui_record_bus import Ui_Dialog
-
-        self.ui = Ui_Dialog()
+        self.ui = Ui_RecordBus_Dialog()
         self.ui.setupUi(self)
         self.__setup__(parent)
 
@@ -285,6 +284,12 @@ class MainWindow(QMainWindow):
         self.ui.system_monitor.layout().addItem(self.verticalSpacer)
         self.setWindowTitle("NAI Mover")
         self.column_count = self.ui.com_bus_table.columnCount()
+        self.com_bus_max_rows = COM_BUS_MAX_ROWS
+        self._pending_motor_updates = {}
+        self._motor_update_timer = QTimer(self)
+        self._motor_update_timer.setSingleShot(True)
+        self._motor_update_timer.setInterval(MOTOR_UPDATE_THROTTLE_MS)
+        self._motor_update_timer.timeout.connect(self._flush_pending_motor_updates)
         self.comboBox = QComboBox()
         self.comboBox.setFont(QFont("Arial", 15))
         self.comboBox.currentIndexChanged.connect(self.selected_new_node)
@@ -301,6 +306,8 @@ class MainWindow(QMainWindow):
 
         self.current_node_id = None
         self.node_index = {}
+
+
 
         # Commands UI
         self._connect_signals(
@@ -692,6 +699,22 @@ class MainWindow(QMainWindow):
 
 
     def update_node_motor_values(self, node_id, values):
+        self._pending_motor_updates[node_id] = values
+        if self._motor_update_timer.isActive():
+            return
+        self._apply_motor_update(node_id, values)
+        self._pending_motor_updates.pop(node_id, None)
+        self._motor_update_timer.start()
+
+    def _flush_pending_motor_updates(self):
+        pending = self._pending_motor_updates
+        self._pending_motor_updates = {}
+        for node_id, values in pending.items():
+            self._apply_motor_update(node_id, values)
+        if self._pending_motor_updates:
+            self._motor_update_timer.start()
+
+    def _apply_motor_update(self, node_id, values):
         node_index = self.node_index.get(node_id)
         if node_index is not None and node_index >= 0:
             motor_stat = self.motor_stats[node_index]
@@ -792,6 +815,7 @@ class MainWindow(QMainWindow):
         for item in items:
             self.ui.com_bus_table.setItem(0, col, QTableWidgetItem(item))
             col += 1
+        self._trim_com_bus_table()
 
     def log_received_messages(self, message):
         self.ui.com_bus_table.insertRow(0)
@@ -800,6 +824,11 @@ class MainWindow(QMainWindow):
         for col, value in zip(range(self.column_count), items):
             item = QTableWidgetItem(str(value))
             self.ui.com_bus_table.setItem(0, col, item)
+        self._trim_com_bus_table()
+
+    def _trim_com_bus_table(self):
+        while self.ui.com_bus_table.rowCount() > self.com_bus_max_rows:
+            self.ui.com_bus_table.removeRow(self.ui.com_bus_table.rowCount() - 1)
 
     def closeEvent(self, event):
         self.serial.close()

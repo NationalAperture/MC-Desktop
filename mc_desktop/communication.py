@@ -106,9 +106,13 @@ class SleepCommand:
     duration: float
 
 class CommunicationManager:
+    IDLE_POLL_MIN_SECONDS = 0.5
+    IDLE_POLL_MAX_SECONDS = 2.0
+    IDLE_POLL_BACKOFF_FACTOR = 2.0
+
     def __init__(self, parent, logger):
         self.logger = logger
-        self.threadpool: Optional[QThreadPool] = None
+        self.threadpool: Optional[QThreadPool] = QThreadPool.globalInstance()
         self.port = None
         self.baudrate = None
         self.parent = parent
@@ -122,6 +126,8 @@ class CommunicationManager:
         self.logging_callback = None
         self.in_motion = False
         self.signals = MySignal()
+        self._idle_poll_interval = self.IDLE_POLL_MIN_SECONDS
+        self._idle_poll_idle_streak = 0
 
     def setup_connection(self):
         while True:
@@ -171,7 +177,7 @@ class CommunicationManager:
         if self._alive:
             return
         if self.threadpool is None:
-            self.threadpool = QThreadPool()
+            self.threadpool = QThreadPool.globalInstance()
         worker_0 = Worker(self.transmit)
         # worker_1 = Worker(self.send_cmd)
         self._alive = True
@@ -222,11 +228,10 @@ class CommunicationManager:
         except Exception as e:
             self.logger.exception("Error sending raw command: %s", e)
 
-    # ToDo: Fix issue with checking in_motion. If the user sends another command it needs
     def transmit(self):
         while True:
             try:
-                item = self._command_queue.get(timeout=0.5)
+                item = self._command_queue.get(timeout=self._idle_poll_interval)
             except Empty:
                 if not self._alive:
                     break
@@ -237,6 +242,7 @@ class CommunicationManager:
                 break
 
             try:
+                self._record_activity()
                 if isinstance(item, SleepCommand):
                     sleep(max(0.0, item.duration))
                     continue
@@ -248,6 +254,15 @@ class CommunicationManager:
                 self.logger.exception("Serial communication failure: %s", exc)
             except Exception:
                 self.logger.exception("Unexpected error while processing serial command.")
+
+    def _record_activity(self) -> None:
+        self._idle_poll_idle_streak = 0
+        self._idle_poll_interval = self.IDLE_POLL_MIN_SECONDS
+
+    def _backoff_idle_poll(self) -> None:
+        self._idle_poll_idle_streak += 1
+        interval = self.IDLE_POLL_MIN_SECONDS * (self.IDLE_POLL_BACKOFF_FACTOR ** self._idle_poll_idle_streak)
+        self._idle_poll_interval = min(self.IDLE_POLL_MAX_SECONDS, interval)
 
     def _process_serial_command(self, command: SerialCommand) -> Optional[str]:
         if not self.connection:
@@ -289,7 +304,13 @@ class CommunicationManager:
         if not self.connection:
             return
         try:
-            self.check_status()
+            status = self.check_status()
+            if not status:
+                return
+            if self.in_motion:
+                self._record_activity()
+            else:
+                self._backoff_idle_poll()
         except serial.SerialException as exc:
             self.logger.exception("Serial error while polling idle status: %s", exc)
 
