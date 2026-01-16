@@ -23,7 +23,7 @@
 
 - [x] **Add keyboard shortcuts for jog controls**: The TODO comment at `main_window.py:267` mentions arrow key bindings for jog. Implement left/right arrow keys for backward/forward jogging.
 - [ ] **Add emergency stop keyboard shortcut**: Bind Escape or Space to the stop command for quick access during operation.
-- [ ] **Show connection status indicator**: Add a visual indicator (LED icon or status bar text) showing whether the serial connection is active.
+- [x] **Show connection status indicator**: Add a visual indicator (LED icon or status bar text) showing whether the serial connection is active.
 - [ ] **Add input validation feedback**: Settings inputs (`set_stage_gh`, `set_kp`, etc.) silently fail on invalid input. Show user-facing error messages or highlight invalid fields.
 - [ ] **Confirm before erasing configuration**: `erase_configuration()` in `main_window.py:507` executes immediately. Add a confirmation dialog to prevent accidental data loss.
 - [ ] **Improve macro editor UX**: Add line numbers, syntax highlighting for commands, and error indicators for malformed macro lines.
@@ -32,7 +32,7 @@
 - [ ] **Disable controls during macro execution**: Prevent conflicting manual commands while a macro is running by disabling jog/move buttons.
 - [ ] **Remember last used serial port**: Store the last successfully connected port in QSettings and pre-select it on next launch.
 - [ ] **Add "Refresh All" button for settings**: Instead of separate refresh buttons for Stage/PID/Motion/Advanced, add a single button to refresh all node parameters.
-- [ ] **Improve update dialog**: Add "What's New" section expandable/collapsible, and show download size before starting.
+- [x] **Improve update dialog**: Add "What's New" section expandable/collapsible, and show download size before starting.
 - [ ] **Add dark/light theme toggle**: Currently uses a fixed gold theme. Allow users to switch themes or follow system preference.
 - [ ] **Add position history graph**: Display a real-time graph of position over time for visual motion monitoring.
 - [ ] **Improve port list display**: Show device descriptions in the port list (e.g., "COM3 - USB Serial Device") instead of just port names.
