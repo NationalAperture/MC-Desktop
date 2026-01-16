@@ -600,7 +600,15 @@ class MainWindow(QMainWindow):
             #self.get_node_values()
 
     def erase_configuration(self):
-        self.send_command(("ecf",))
+        confirm = QMessageBox.question(
+            self,
+            "Erase Configuration",
+            "This will erase the controller configuration. Continue?",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            QMessageBox.StandardButton.No,
+        )
+        if confirm == QMessageBox.StandardButton.Yes:
+            self.send_command(("ecf",))
 
     def get_stage_values(self):
         self.settings.refresh_stage_values()

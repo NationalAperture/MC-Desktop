@@ -73,6 +73,25 @@ class MacroRunner:
     def __init__(self, window, logger: Optional[logging.Logger] = None) -> None:
         self.window = window
         self.logger = logger or logging.getLogger(__name__)
+        self._validation_labels = {
+            "GH_input": ("gh_value_label", "GH"),
+            "TPI_input": ("tpi_value_label", "TPI"),
+            "CPR_input": ("cpr_value_label", "CPR"),
+            "kp_input": ("kp_value_label", "KP"),
+            "ki_input": ("ki_value_label", "KI"),
+            "kd_input": ("kd_value_label", "KD"),
+            "int_lmt_input": ("int_lmt_value_label", "Integrator Lmt"),
+            "sample_rate_input": ("sample_rate_value_label", "Sample Rate"),
+            "accel_input": ("accel_value_label", "Acceleration"),
+            "vel_input": ("vel_value_label", "Velocity"),
+            "decel_input": ("decel_value_label", "Deceleration"),
+            "err_input": ("err_value_label", "Error Limit"),
+            "jog_input": ("jog_label", "Jog"),
+            "hs_jog_input": ("hs_jog_label", "HS Jog"),
+            "lower_limit_input": ("lower_limit_value", "Lower Limit"),
+            "upper_limit_input": ("upper_limit_value", "Upper Limit"),
+            "pos_tolerance_input": ("pos_tolerance_value", "Position Tolerance"),
+        }
         self.macro_list: Optional[Sequence[str]] = None
         self.macro_list_copy: Optional[Sequence[str]] = None
         self.number_of_runs: int = 1
@@ -385,9 +404,30 @@ class MacroRunner:
 class NodeSettingsController:
     """Encapsulates the UI-heavy node settings coordination logic."""
 
+    _DEFAULT_VALIDATION_LABELS = {
+        "GH_input": ("gh_value_label", "GH"),
+        "TPI_input": ("tpi_value_label", "TPI"),
+        "CPR_input": ("cpr_value_label", "CPR"),
+        "kp_input": ("kp_value_label", "KP"),
+        "ki_input": ("ki_value_label", "KI"),
+        "kd_input": ("kd_value_label", "KD"),
+        "int_lmt_input": ("int_lmt_value_label", "Integrator Lmt"),
+        "sample_rate_input": ("sample_rate_value_label", "Sample Rate"),
+        "accel_input": ("accel_value_label", "Acceleration"),
+        "vel_input": ("vel_value_label", "Velocity"),
+        "decel_input": ("decel_value_label", "Deceleration"),
+        "err_input": ("err_value_label", "Error Limit"),
+        "jog_input": ("jog_label", "Jog"),
+        "hs_jog_input": ("hs_jog_label", "HS Jog"),
+        "lower_limit_input": ("lower_limit_value", "Lower Limit"),
+        "upper_limit_input": ("upper_limit_value", "Upper Limit"),
+        "pos_tolerance_input": ("pos_tolerance_value", "Position Tolerance"),
+    }
+
     def __init__(self, window, logger: Optional[logging.Logger] = None) -> None:
         self.window = window
         self.logger = logger or logging.getLogger(__name__)
+        self._validation_labels = dict(self._DEFAULT_VALIDATION_LABELS)
 
     @staticmethod
     def format_stage_values(stage) -> str:
@@ -473,8 +513,9 @@ class NodeSettingsController:
             self.window.ui.gh_value_label.setText(f"GH: {gh}")
             node = self.window.node_manager.get_stage(self.window.node_manager.current_node_id)
             node.update({"GH": gh})
+            self._mark_input_valid("GH_input")
         except ValueError:
-            self.logger.error("Value must be int. Value received: %s", self.window.ui.GH_input.text())
+            self._warn_invalid_input("GH_input", "an integer", self.window.ui.GH_input.text())
 
     def set_stage_tpi(self) -> None:
         try:
@@ -483,8 +524,9 @@ class NodeSettingsController:
             self.window.ui.tpi_value_label.setText(f"TPI: {tpi}")
             node = self.window.node_manager.get_stage(self.window.node_manager.current_node_id)
             node.update({"TPI": tpi})
+            self._mark_input_valid("TPI_input")
         except ValueError:
-            self.logger.error("Value must be int. Value received: %s", self.window.ui.TPI_input.text())
+            self._warn_invalid_input("TPI_input", "an integer", self.window.ui.TPI_input.text())
 
     def set_stage_cpr(self) -> None:
         try:
@@ -493,8 +535,9 @@ class NodeSettingsController:
             self.window.ui.cpr_value_label.setText(f"CPR: {cpr}")
             node = self.window.node_manager.get_stage(self.window.node_manager.current_node_id)
             node.update({"CPR": cpr})
+            self._mark_input_valid("CPR_input")
         except ValueError:
-            self.logger.error("Value must be int. Value received: %s", self.window.ui.CPR_input.text())
+            self._warn_invalid_input("CPR_input", "an integer", self.window.ui.CPR_input.text())
 
     def refresh_pid_values(self) -> None:
         self.window.callbacks.append(self.update_pid_values)
@@ -649,8 +692,9 @@ class NodeSettingsController:
             self.window.ui.jog_label.setText(f"Jog: {jog}")
             motor_stat = self.window.motor_stats[self.window.comboBox.currentIndex()]
             motor_stat.set_jog()
+            self._mark_input_valid("jog_input")
         except ValueError:
-            self.logger.error("Value must be int. Value received: %s", self.window.ui.jog_input.text())
+            self._warn_invalid_input("jog_input", "an integer", self.window.ui.jog_input.text())
 
     def set_hs_jog(self) -> None:
         node = self.window.node_manager.get_motion(self.window.comboBox.currentText())
@@ -660,8 +704,9 @@ class NodeSettingsController:
             self.window.ui.hs_jog_label.setText(f"HS Jog: {hs_jog}")
             motor_stat = self.window.motor_stats[self.window.comboBox.currentIndex()]
             motor_stat.set_jog()
+            self._mark_input_valid("hs_jog_input")
         except ValueError:
-            self.logger.error("Value must be int. Value received: %s", self.window.ui.hs_jog_input.text())
+            self._warn_invalid_input("hs_jog_input", "an integer", self.window.ui.hs_jog_input.text())
 
     def refresh_advanced_values(self) -> None:
         self.window.callbacks.append(self.update_advanced_values)
@@ -687,25 +732,40 @@ class NodeSettingsController:
         node.update({"Upper": upper})
 
     def set_lower_limit(self) -> None:
-        limit = int(self.window.ui.lower_limit_input.text())
+        try:
+            limit = int(self.window.ui.lower_limit_input.text())
+        except ValueError:
+            self._warn_invalid_input("lower_limit_input", "an integer", self.window.ui.lower_limit_input.text())
+            return
         self.window.send_command((f"sll {limit}",))
         self.window.ui.lower_limit_value.setText(f"Lower Limit: {limit}")
         node = self.window.node_manager.get_advanced(self.window.node_manager.current_node_id)
         node.update({"Lower": limit})
+        self._mark_input_valid("lower_limit_input")
 
     def set_upper_limit(self) -> None:
-        limit = int(self.window.ui.upper_limit_input.text())
+        try:
+            limit = int(self.window.ui.upper_limit_input.text())
+        except ValueError:
+            self._warn_invalid_input("upper_limit_input", "an integer", self.window.ui.upper_limit_input.text())
+            return
         self.window.send_command((f"slu {limit}",))
         self.window.ui.upper_limit_value.setText(f"Upper Limit: {limit}")
         node = self.window.node_manager.get_advanced(self.window.node_manager.current_node_id)
         node.update({"Upper": limit})
+        self._mark_input_valid("upper_limit_input")
 
     def set_tolerance(self) -> None:
-        tolerance = int(self.window.ui.pos_tolerance_input.text())
+        try:
+            tolerance = int(self.window.ui.pos_tolerance_input.text())
+        except ValueError:
+            self._warn_invalid_input("pos_tolerance_input", "an integer", self.window.ui.pos_tolerance_input.text())
+            return
         self.window.send_command((f"tol {tolerance}",))
         self.window.ui.pos_tolerance_value.setText(f"Position Tolerance: {tolerance}")
         node = self.window.node_manager.get_advanced(self.window.node_manager.current_node_id)
         node.update({"Tolerance": tolerance})
+        self._mark_input_valid("pos_tolerance_input")
 
     def _update_pid_value(
         self,
@@ -724,8 +784,13 @@ class NodeSettingsController:
             getattr(ui, label_attr).setText(f"{label_prefix}: {value}")
             node = self.window.node_manager.get_pid(self.window.node_manager.current_node_id)
             node.update({node_key: value})
+            self._mark_input_valid(input_attr)
         except ValueError:
-            self.logger.error("Value must be %s. Value received: %s", caster.__name__, getattr(ui, input_attr).text())
+            self._warn_invalid_input(
+                input_attr,
+                caster.__name__,
+                getattr(ui, input_attr).text(),
+            )
 
     def _update_motion_value(
         self,
@@ -742,5 +807,31 @@ class NodeSettingsController:
             getattr(self.window.ui, label_attr).setText(f"{label_prefix}: {value}")
             node = self.window.node_manager.get_motion(self.window.node_manager.current_node_id)
             node.update({node_key: value})
+            self._mark_input_valid(input_attr)
         except ValueError:
-            self.logger.error("Value must be int. Value received: %s", getattr(self.window.ui, input_attr).text())
+            self._warn_invalid_input(input_attr, "an integer", getattr(self.window.ui, input_attr).text())
+
+    def _warn_invalid_input(self, input_attr: str, expected: str, value: str) -> None:
+        widget = getattr(self.window.ui, input_attr, None)
+        if widget is not None:
+            widget.setStyleSheet("border: 1px solid #e74c3c;")
+        labels = getattr(self, "_validation_labels", self._DEFAULT_VALIDATION_LABELS)
+        label_attr, label_prefix = labels.get(input_attr, (None, None))
+        if label_attr is not None:
+            label = getattr(self.window.ui, label_attr, None)
+            if label is not None:
+                label.setStyleSheet("color: #e74c3c;")
+                label.setText(f"{label_prefix}: Invalid (expected {expected})")
+        message = f"Invalid value '{value}'. Expected {expected}."
+        self.logger.error(message)
+
+    def _mark_input_valid(self, input_attr: str) -> None:
+        widget = getattr(self.window.ui, input_attr, None)
+        if widget is not None:
+            widget.setStyleSheet("")
+        labels = getattr(self, "_validation_labels", self._DEFAULT_VALIDATION_LABELS)
+        label_attr, _ = labels.get(input_attr, (None, None))
+        if label_attr is not None:
+            label = getattr(self.window.ui, label_attr, None)
+            if label is not None:
+                label.setStyleSheet("")

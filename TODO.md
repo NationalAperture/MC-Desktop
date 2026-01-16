@@ -24,8 +24,8 @@
 - [x] **Add keyboard shortcuts for jog controls**: The TODO comment at `main_window.py:267` mentions arrow key bindings for jog. Implement left/right arrow keys for backward/forward jogging.
 - [ ] **Add emergency stop keyboard shortcut**: Bind Escape or Space to the stop command for quick access during operation.
 - [x] **Show connection status indicator**: Add a visual indicator (LED icon or status bar text) showing whether the serial connection is active.
-- [ ] **Add input validation feedback**: Settings inputs (`set_stage_gh`, `set_kp`, etc.) silently fail on invalid input. Show user-facing error messages or highlight invalid fields.
-- [ ] **Confirm before erasing configuration**: `erase_configuration()` in `main_window.py:507` executes immediately. Add a confirmation dialog to prevent accidental data loss.
+- [x] **Add input validation feedback**: Settings inputs (`set_stage_gh`, `set_kp`, etc.) silently fail on invalid input. Show user-facing error messages or highlight invalid fields.
+- [x] **Confirm before erasing configuration**: `erase_configuration()` in `main_window.py:507` executes immediately. Add a confirmation dialog to prevent accidental data loss.
 - [ ] **Improve macro editor UX**: Add line numbers, syntax highlighting for commands, and error indicators for malformed macro lines.
 - [x] **Add macro execution progress indicator**: Show which step is currently executing and overall progress (e.g., "Step 3/10" or a progress bar).
 - [x] **Add macro pause/resume functionality**: Allow users to pause a running macro and resume later instead of only stop.
