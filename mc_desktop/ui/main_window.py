@@ -12,7 +12,7 @@ from collections import deque
 from datetime import datetime
 
 from PySide6.QtCore import Qt, QSettings, QTimer
-from PySide6.QtGui import QAction, QFont, QKeySequence, QShortcut
+from PySide6.QtGui import QAction, QColor, QFont, QKeySequence, QPainter, QPixmap, QShortcut
 from PySide6.QtWidgets import (
     QApplication,
     QComboBox,
@@ -42,6 +42,9 @@ from .update_dialog import UpdateDialog
 logger = logging.getLogger(__name__) # Create Logger
 COM_BUS_MAX_ROWS = 1000
 MOTOR_UPDATE_THROTTLE_MS = 100
+CONNECTION_LED_SIZE = 10
+CONNECTION_LED_ON_COLOR = "#2ecc71"
+CONNECTION_LED_OFF_COLOR = "#e74c3c"
 
 def clear_layout(layout, delete_widgets):
     for i in reversed(range(layout.count())):
@@ -144,6 +147,7 @@ class Connection(QWidget):
         self.parent.serial.baudrate = self.ui.baud_rates.currentText()
         successful = self.parent.serial.setup_connection()
         if successful:
+            self.parent.set_connection_status(True)
             self.ui.tabWidget.setCurrentIndex(1)
             # self.parent.get_node_values()
 
@@ -388,6 +392,12 @@ class MainWindow(QMainWindow):
         self.update_checker.check_failed.connect(self._on_update_check_failed)
         QTimer.singleShot(5000, self._check_for_updates)
 
+        self._connection_led = QLabel()
+        self._connection_status_label = QLabel()
+        self.ui.statusbar.addPermanentWidget(self._connection_led)
+        self.ui.statusbar.addPermanentWidget(self._connection_status_label)
+        self._set_connection_indicator(False)
+
         version_label = QLabel(f"v{__version__}")
         self.ui.statusbar.addPermanentWidget(version_label)
 
@@ -437,6 +447,22 @@ class MainWindow(QMainWindow):
         cmd = ("abm",)
         self.send_command(cmd)
     """END OF COMMANDS IMPLEMENTATION """
+
+    def set_connection_status(self, connected: bool) -> None:
+        self._set_connection_indicator(connected)
+
+    def _set_connection_indicator(self, connected: bool) -> None:
+        color = QColor(CONNECTION_LED_ON_COLOR if connected else CONNECTION_LED_OFF_COLOR)
+        pixmap = QPixmap(CONNECTION_LED_SIZE, CONNECTION_LED_SIZE)
+        pixmap.fill(Qt.GlobalColor.transparent)
+        painter = QPainter(pixmap)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing, True)
+        painter.setPen(Qt.PenStyle.NoPen)
+        painter.setBrush(color)
+        painter.drawEllipse(0, 0, CONNECTION_LED_SIZE, CONNECTION_LED_SIZE)
+        painter.end()
+        self._connection_led.setPixmap(pixmap)
+        self._connection_status_label.setText("Connected" if connected else "Disconnected")
 
     def keyPressEvent(self, event):
         if event.isAutoRepeat():
@@ -866,5 +892,6 @@ class MainWindow(QMainWindow):
             self.ui.com_bus_table.removeRow(self.ui.com_bus_table.rowCount() - 1)
 
     def closeEvent(self, event):
+        self._set_connection_indicator(False)
         self.serial.close()
         QApplication.closeAllWindows()
