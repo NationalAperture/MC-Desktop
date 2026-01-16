@@ -84,6 +84,9 @@ class MacroRunner:
         self._runs_completed: int = 0
         self._total_runs_requested: Optional[int] = None
         self._active: bool = False
+        self._paused: bool = False
+        self._steps_executed: int = 0
+        self._steps_total: int = 0
 
     @staticmethod
     def parse_macro_text(text: str) -> Sequence[str]:
@@ -132,8 +135,10 @@ class MacroRunner:
             return
 
         self._active = True
+        self._paused = False
         self._runs_completed = 0
         self._prepare_run_state(steps)
+        self.window.set_macro_pause_state(True, False)
 
         ui = self.window.ui
         if ui.run_variable_rb.isChecked():
@@ -143,6 +148,14 @@ class MacroRunner:
             self._total_runs_requested = None
 
         self.manage_macro()
+
+    def toggle_pause(self) -> None:
+        if not self._active:
+            return
+        self._paused = not self._paused
+        self.window.set_macro_pause_state(True, self._paused)
+        if not self._paused and not self._awaiting_completion:
+            self.manage_macro()
 
     def set_number_of_runs(self, *_: object, **__: object) -> None:
         ui = self.window.ui
@@ -157,6 +170,8 @@ class MacroRunner:
 
     def manage_macro(self, *_, **__) -> None:
         if not self._active:
+            return
+        if self._paused:
             return
         if self._awaiting_completion:
             return
@@ -175,6 +190,8 @@ class MacroRunner:
             return
 
         self._awaiting_completion = False
+        if self._paused:
+            return
         self.manage_macro()
 
     def repopulate_macro(self, macro_list: Iterable[str]) -> None:
@@ -191,6 +208,9 @@ class MacroRunner:
         self._loop_stack = []
         self._current_index = 0
         self._awaiting_completion = False
+        self._steps_executed = 0
+        self._steps_total = self._compute_total_steps(self._raw_steps)
+        self.window.set_macro_progress(0, self._steps_total)
         self.repopulate_macro(self._raw_steps)
 
     def _compute_loop_bounds(self, steps: Sequence[str]) -> Dict[int, int]:
@@ -271,6 +291,8 @@ class MacroRunner:
                 await_completion=True,
                 context="macro",
             )
+            self._steps_executed += 1
+            self.window.set_macro_progress(self._steps_executed, self._steps_total)
         elif len(parts) == 2:
             node_id, cmd = parts
             params = (node_id, cmd)
@@ -281,6 +303,8 @@ class MacroRunner:
                 await_completion=True,
                 context="macro",
             )
+            self._steps_executed += 1
+            self.window.set_macro_progress(self._steps_executed, self._steps_total)
         else:
             self.logger.warning("Macro command '%s' is incomplete and will be skipped.", command)
             self._awaiting_completion = False
@@ -299,6 +323,10 @@ class MacroRunner:
             ui.run_count.setText(f"Run Count: {self._runs_completed}/{total}")
             if self._runs_completed >= total:
                 self._active = False
+                self._paused = False
+                self.window.set_macro_pause_state(False, False)
+                self.window.set_macro_progress(self._steps_total, self._steps_total)
+                self.repopulate_macro(self._raw_steps)
                 return
             self._prepare_run_state(self.macro_list_copy or [])
             next_run = min(self._runs_completed + 1, total)
@@ -307,6 +335,10 @@ class MacroRunner:
             return
 
         self._active = False
+        self._paused = False
+        self.window.set_macro_pause_state(False, False)
+        self.window.set_macro_progress(self._steps_total, self._steps_total)
+        self.repopulate_macro(self._raw_steps)
 
     def _parse_loop_count(self, raw: str) -> int:
         parts = raw.split()
@@ -322,6 +354,32 @@ class MacroRunner:
     def _update_macro_display(self) -> None:
         remaining = self._raw_steps[self._current_index :]
         self.repopulate_macro(remaining)
+
+    def _compute_total_steps(self, steps: Sequence[str]) -> int:
+        def count_range(start: int, end: int) -> int:
+            total = 0
+            idx = start
+            while idx < end:
+                raw = steps[idx]
+                token = raw.strip().lower()
+                if token.startswith("loop"):
+                    end_idx = self._loop_bounds.get(idx)
+                    count = self._parse_loop_count(raw)
+                    if end_idx is None or count <= 0:
+                        idx += 1
+                        continue
+                    inner = count_range(idx + 1, end_idx)
+                    total += inner * count
+                    idx = end_idx + 1
+                    continue
+                if token == "end":
+                    idx += 1
+                    continue
+                total += 1
+                idx += 1
+            return total
+
+        return count_range(0, len(steps))
 
 
 class NodeSettingsController:

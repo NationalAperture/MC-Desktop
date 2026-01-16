@@ -22,10 +22,12 @@ from PySide6.QtWidgets import (
     QLabel,
     QMainWindow,
     QMessageBox,
+    QPushButton,
     QSizePolicy,
     QSpacerItem,
     QTableWidgetItem,
     QTextEdit,
+    QProgressBar,
     QWidget,
 )
 from ..communication import CommunicationManager
@@ -303,6 +305,14 @@ class MainWindow(QMainWindow):
         self.macro_text = QTextEdit()
         self.macro_text.setFont(QFont("Arial", 15))
         self.ui.macro_group_box.layout().addWidget(self.macro_text, 1, 0, 1, 5)
+        self.macro_progress = QProgressBar()
+        self.macro_progress.setRange(0, 1)
+        self.macro_progress.setValue(0)
+        self.macro_progress.setFormat("Step %v/%m")
+        self.ui.macro_group_box.layout().addWidget(self.macro_progress, 3, 0, 1, 4)
+        self.pause_macro_btn = QPushButton("Pause")
+        self.pause_macro_btn.setEnabled(False)
+        self.ui.macro_group_box.layout().addWidget(self.pause_macro_btn, 3, 4, 1, 1)
         self.macros = MacroRunner(self, logger=log or logger)
         self.serial.signals.command_complete.connect(self.macros.on_command_complete)
         self.settings = NodeSettingsController(self, logger=log or logger)
@@ -343,6 +353,7 @@ class MainWindow(QMainWindow):
             (self.ui.run_variable_rb.clicked, self.macros.set_number_of_runs),
             (self.ui.variable_amount_value.textChanged, self.macros.set_number_of_runs),
         )
+        self.pause_macro_btn.clicked.connect(self.macros.toggle_pause)
 
         # Settings UI
         self.ui.save_config_btn.clicked.connect(self.save_configuration)
@@ -453,6 +464,16 @@ class MainWindow(QMainWindow):
         cmd = ("abm",)
         self.send_command(cmd)
     """END OF COMMANDS IMPLEMENTATION """
+
+    def set_macro_progress(self, current_step: int, total_steps: int) -> None:
+        total = max(total_steps, 1)
+        value = min(max(current_step, 0), total)
+        self.macro_progress.setRange(0, total)
+        self.macro_progress.setValue(value)
+
+    def set_macro_pause_state(self, enabled: bool, paused: bool) -> None:
+        self.pause_macro_btn.setEnabled(enabled)
+        self.pause_macro_btn.setText("Resume" if paused else "Pause")
 
     def set_connection_status(self, connected: bool) -> None:
         self._set_connection_indicator(connected)

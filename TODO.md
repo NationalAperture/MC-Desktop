@@ -27,8 +27,8 @@
 - [ ] **Add input validation feedback**: Settings inputs (`set_stage_gh`, `set_kp`, etc.) silently fail on invalid input. Show user-facing error messages or highlight invalid fields.
 - [ ] **Confirm before erasing configuration**: `erase_configuration()` in `main_window.py:507` executes immediately. Add a confirmation dialog to prevent accidental data loss.
 - [ ] **Improve macro editor UX**: Add line numbers, syntax highlighting for commands, and error indicators for malformed macro lines.
-- [ ] **Add macro execution progress indicator**: Show which step is currently executing and overall progress (e.g., "Step 3/10" or a progress bar).
-- [ ] **Add macro pause/resume functionality**: Allow users to pause a running macro and resume later instead of only stop.
+- [x] **Add macro execution progress indicator**: Show which step is currently executing and overall progress (e.g., "Step 3/10" or a progress bar).
+- [x] **Add macro pause/resume functionality**: Allow users to pause a running macro and resume later instead of only stop.
 - [ ] **Disable controls during macro execution**: Prevent conflicting manual commands while a macro is running by disabling jog/move buttons.
 - [ ] **Remember last used serial port**: Store the last successfully connected port in QSettings and pre-select it on next launch.
 - [ ] **Add "Refresh All" button for settings**: Instead of separate refresh buttons for Stage/PID/Motion/Advanced, add a single button to refresh all node parameters.
