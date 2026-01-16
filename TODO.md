@@ -56,12 +56,12 @@
 
 ## Testing Improvements
 
-- [ ] **Add integration tests for serial communication**: Current tests use fakes. Add tests with mock serial device or loopback for realistic testing.
-- [ ] **Add UI tests with pytest-qt**: Test button clicks, signal emissions, and UI state changes.
-- [ ] **Increase test coverage for NodeSettingsController**: `update_*_values` methods and setters need more test coverage.
-- [ ] **Add tests for update checker/downloader**: `updater.py` has no test coverage.
-- [ ] **Add tests for edge cases**: Empty node list, invalid serial responses, malformed macro files.
-- [ ] **Add performance benchmarks**: Measure and track serial polling latency and UI responsiveness.
+- [x] **Add integration tests for serial communication**: Current tests use fakes. Add tests with mock serial device or loopback for realistic testing.
+- [x] **Add UI tests with pytest-qt**: Test button clicks, signal emissions, and UI state changes.
+- [x] **Increase test coverage for NodeSettingsController**: `update_*_values` methods and setters need more test coverage.
+- [x] **Add tests for update checker/downloader**: `updater.py` has no test coverage.
+- [x] **Add tests for edge cases**: Empty node list, invalid serial responses, malformed macro files.
+- [x] **Add performance benchmarks**: Measure and track serial polling latency and UI responsiveness.
 
 ## Documentation Improvements
 

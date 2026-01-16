@@ -75,6 +75,12 @@ class FakeWindow:
     def log_sent_messages(self, message: tuple[str, ...]) -> None:
         self.sent_log.append(message)
 
+    def set_macro_pause_state(self, *_args, **_kwargs) -> None:
+        return None
+
+    def set_macro_progress(self, *_args, **_kwargs) -> None:
+        return None
+
 
 def complete_macro(runner: MacroRunner) -> None:
     runner.on_command_complete(types.SimpleNamespace(context="macro"), None)
