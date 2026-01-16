@@ -263,7 +263,6 @@ class RecordBus(QDialog):
             self.parent.record_data(int(start), int(end))
         pass
 
-# ToDo: Set key bindings for the left and right arrow keys to jog the stage.
 class MainWindow(QMainWindow):
     def __init__(self, log=None):
         super().__init__()
@@ -283,6 +282,7 @@ class MainWindow(QMainWindow):
         self.verticalSpacer = QSpacerItem(20, 40, QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Expanding)
         self.ui.system_monitor.layout().addItem(self.verticalSpacer)
         self.setWindowTitle("NAI Mover")
+        self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
         self.column_count = self.ui.com_bus_table.columnCount()
         self.com_bus_max_rows = COM_BUS_MAX_ROWS
         self._pending_motor_updates = {}
@@ -306,6 +306,7 @@ class MainWindow(QMainWindow):
 
         self.current_node_id = None
         self.node_index = {}
+        self._jog_key_active = None
 
 
 
@@ -436,6 +437,40 @@ class MainWindow(QMainWindow):
         cmd = ("abm",)
         self.send_command(cmd)
     """END OF COMMANDS IMPLEMENTATION """
+
+    def keyPressEvent(self, event):
+        if event.isAutoRepeat():
+            return
+        if not self.hasFocus():
+            return
+        key = event.key()
+        if key in (Qt.Key.Key_Left, Qt.Key.Key_Right):
+            high_speed = bool(event.modifiers() & Qt.KeyboardModifier.ShiftModifier)
+            self._jog_key_active = key
+            self._jog_key(high_speed=high_speed, reverse=key == Qt.Key.Key_Left)
+            event.accept()
+            return
+        super().keyPressEvent(event)
+
+    def keyReleaseEvent(self, event):
+        if event.isAutoRepeat():
+            return
+        if not self.hasFocus():
+            return
+        key = event.key()
+        if key in (Qt.Key.Key_Left, Qt.Key.Key_Right):
+            if self._jog_key_active == key:
+                self._jog_key_active = None
+            self.stop()
+            event.accept()
+            return
+        super().keyReleaseEvent(event)
+
+    def _jog_key(self, high_speed: bool, reverse: bool) -> None:
+        node = self.node_manager.get_motion(self.comboBox.currentText())
+        speed = node["HSValue"] if high_speed else node["Jog"]
+        command_speed = f"-{speed}" if reverse else speed
+        self.send_command(("jog", command_speed))
 
     """SYSTEM IMPLEMENTATION"""
 

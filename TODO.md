@@ -21,7 +21,7 @@
 
 ## UI/UX Improvements
 
-- [ ] **Add keyboard shortcuts for jog controls**: The TODO comment at `main_window.py:267` mentions arrow key bindings for jog. Implement left/right arrow keys for backward/forward jogging.
+- [x] **Add keyboard shortcuts for jog controls**: The TODO comment at `main_window.py:267` mentions arrow key bindings for jog. Implement left/right arrow keys for backward/forward jogging.
 - [ ] **Add emergency stop keyboard shortcut**: Bind Escape or Space to the stop command for quick access during operation.
 - [ ] **Show connection status indicator**: Add a visual indicator (LED icon or status bar text) showing whether the serial connection is active.
 - [ ] **Add input validation feedback**: Settings inputs (`set_stage_gh`, `set_kp`, etc.) silently fail on invalid input. Show user-facing error messages or highlight invalid fields.
