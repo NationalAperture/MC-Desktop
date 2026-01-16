@@ -1,8 +1,17 @@
 """Update notification dialog."""
 
 from PySide6.QtWidgets import (
-    QDialog, QVBoxLayout, QLabel, QPushButton,
-    QHBoxLayout, QCheckBox, QProgressBar, QMessageBox, QTextBrowser
+    QDialog,
+    QVBoxLayout,
+    QLabel,
+    QPushButton,
+    QHBoxLayout,
+    QCheckBox,
+    QProgressBar,
+    QMessageBox,
+    QTextBrowser,
+    QToolButton,
+    QWidget,
 )
 from PySide6.QtCore import Qt, QSettings
 from PySide6.QtGui import QDesktopServices
@@ -14,7 +23,14 @@ from mc_desktop.updater import UpdateDownloader
 class UpdateDialog(QDialog):
     """Dialog prompting user to update the application."""
 
-    def __init__(self, new_version: str, download_url: str, release_notes: str = "", parent=None):
+    def __init__(
+        self,
+        new_version: str,
+        download_url: str,
+        release_notes: str = "",
+        download_size: object = None,
+        parent=None,
+    ):
         super().__init__(parent)
         self.download_url = download_url
         self.new_version = new_version
@@ -42,16 +58,34 @@ class UpdateDialog(QDialog):
         self.message.setWordWrap(True)
         layout.addWidget(self.message)
 
-        # Release notes
+        # Download size
+        self.size_label = QLabel()
+        self._set_download_size(download_size)
+        layout.addWidget(self.size_label)
+
+        # Release notes (collapsible)
         if release_notes:
-            notes_label = QLabel("What's New:")
-            layout.addWidget(notes_label)
+            self.notes_toggle = QToolButton()
+            self.notes_toggle.setText("What's New")
+            self.notes_toggle.setCheckable(True)
+            self.notes_toggle.setChecked(False)
+            self.notes_toggle.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextBesideIcon)
+            self.notes_toggle.setArrowType(Qt.ArrowType.RightArrow)
+            layout.addWidget(self.notes_toggle)
+
+            self.notes_container = QWidget()
+            notes_layout = QVBoxLayout(self.notes_container)
+            notes_layout.setContentsMargins(0, 0, 0, 0)
 
             self.release_notes = QTextBrowser()
             self.release_notes.setMarkdown(release_notes)
             self.release_notes.setOpenExternalLinks(True)
             self.release_notes.setMaximumHeight(150)
-            layout.addWidget(self.release_notes)
+            notes_layout.addWidget(self.release_notes)
+
+            self.notes_container.setVisible(False)
+            layout.addWidget(self.notes_container)
+            self.notes_toggle.toggled.connect(self._toggle_release_notes)
 
         # Progress bar (hidden initially)
         self.progress_bar = QProgressBar()
@@ -88,6 +122,24 @@ class UpdateDialog(QDialog):
     def _get_current_version(self) -> str:
         from mc_desktop.version import __version__
         return __version__
+
+    def _set_download_size(self, download_size: object) -> None:
+        if download_size is None:
+            self.size_label.setText("Download size: Unknown")
+            return
+        try:
+            size = int(download_size)
+        except (TypeError, ValueError):
+            self.size_label.setText("Download size: Unknown")
+            return
+        size_mb = size / (1024 * 1024)
+        self.size_label.setText(f"Download size: {size_mb:.1f} MB")
+
+    def _toggle_release_notes(self, expanded: bool) -> None:
+        self.notes_container.setVisible(expanded)
+        self.notes_toggle.setArrowType(
+            Qt.ArrowType.DownArrow if expanded else Qt.ArrowType.RightArrow
+        )
 
     def _open_download(self):
         """Open the download URL in the default browser."""

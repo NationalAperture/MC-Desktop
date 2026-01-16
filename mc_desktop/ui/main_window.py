@@ -12,7 +12,7 @@ from collections import deque
 from datetime import datetime
 
 from PySide6.QtCore import Qt, QSettings, QTimer
-from PySide6.QtGui import QAction, QFont, QKeySequence, QShortcut
+from PySide6.QtGui import QAction, QColor, QFont, QKeySequence, QPainter, QPixmap, QShortcut
 from PySide6.QtWidgets import (
     QApplication,
     QComboBox,
@@ -22,10 +22,12 @@ from PySide6.QtWidgets import (
     QLabel,
     QMainWindow,
     QMessageBox,
+    QPushButton,
     QSizePolicy,
     QSpacerItem,
     QTableWidgetItem,
     QTextEdit,
+    QProgressBar,
     QWidget,
 )
 from ..communication import CommunicationManager
@@ -42,6 +44,9 @@ from .update_dialog import UpdateDialog
 logger = logging.getLogger(__name__) # Create Logger
 COM_BUS_MAX_ROWS = 1000
 MOTOR_UPDATE_THROTTLE_MS = 100
+CONNECTION_LED_SIZE = 10
+CONNECTION_LED_ON_COLOR = "#2ecc71"
+CONNECTION_LED_OFF_COLOR = "#e74c3c"
 
 def clear_layout(layout, delete_widgets):
     for i in reversed(range(layout.count())):
@@ -144,6 +149,7 @@ class Connection(QWidget):
         self.parent.serial.baudrate = self.ui.baud_rates.currentText()
         successful = self.parent.serial.setup_connection()
         if successful:
+            self.parent.set_connection_status(True)
             self.ui.tabWidget.setCurrentIndex(1)
             # self.parent.get_node_values()
 
@@ -263,7 +269,6 @@ class RecordBus(QDialog):
             self.parent.record_data(int(start), int(end))
         pass
 
-# ToDo: Set key bindings for the left and right arrow keys to jog the stage.
 class MainWindow(QMainWindow):
     def __init__(self, log=None):
         super().__init__()
@@ -283,6 +288,7 @@ class MainWindow(QMainWindow):
         self.verticalSpacer = QSpacerItem(20, 40, QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Expanding)
         self.ui.system_monitor.layout().addItem(self.verticalSpacer)
         self.setWindowTitle("NAI Mover")
+        self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
         self.column_count = self.ui.com_bus_table.columnCount()
         self.com_bus_max_rows = COM_BUS_MAX_ROWS
         self._pending_motor_updates = {}
@@ -299,6 +305,14 @@ class MainWindow(QMainWindow):
         self.macro_text = QTextEdit()
         self.macro_text.setFont(QFont("Arial", 15))
         self.ui.macro_group_box.layout().addWidget(self.macro_text, 1, 0, 1, 5)
+        self.macro_progress = QProgressBar()
+        self.macro_progress.setRange(0, 1)
+        self.macro_progress.setValue(0)
+        self.macro_progress.setFormat("Step %v/%m")
+        self.ui.macro_group_box.layout().addWidget(self.macro_progress, 3, 0, 1, 4)
+        self.pause_macro_btn = QPushButton("Pause")
+        self.pause_macro_btn.setEnabled(False)
+        self.ui.macro_group_box.layout().addWidget(self.pause_macro_btn, 3, 4, 1, 1)
         self.macros = MacroRunner(self, logger=log or logger)
         self.serial.signals.command_complete.connect(self.macros.on_command_complete)
         self.settings = NodeSettingsController(self, logger=log or logger)
@@ -306,6 +320,7 @@ class MainWindow(QMainWindow):
 
         self.current_node_id = None
         self.node_index = {}
+        self._jog_key_active = None
 
 
 
@@ -338,6 +353,7 @@ class MainWindow(QMainWindow):
             (self.ui.run_variable_rb.clicked, self.macros.set_number_of_runs),
             (self.ui.variable_amount_value.textChanged, self.macros.set_number_of_runs),
         )
+        self.pause_macro_btn.clicked.connect(self.macros.toggle_pause)
 
         # Settings UI
         self.ui.save_config_btn.clicked.connect(self.save_configuration)
@@ -387,6 +403,12 @@ class MainWindow(QMainWindow):
         self.update_checker.check_failed.connect(self._on_update_check_failed)
         QTimer.singleShot(5000, self._check_for_updates)
 
+        self._connection_led = QLabel()
+        self._connection_status_label = QLabel()
+        self.ui.statusbar.addPermanentWidget(self._connection_led)
+        self.ui.statusbar.addPermanentWidget(self._connection_status_label)
+        self._set_connection_indicator(False)
+
         version_label = QLabel(f"v{__version__}")
         self.ui.statusbar.addPermanentWidget(version_label)
 
@@ -399,13 +421,19 @@ class MainWindow(QMainWindow):
     def _check_for_updates(self):
         self.update_checker.check_for_updates()
 
-    def _on_update_available(self, new_version: str, download_url: str, release_notes: str):
+    def _on_update_available(
+        self,
+        new_version: str,
+        download_url: str,
+        release_notes: str,
+        download_size: object,
+    ):
         settings = QSettings("NAI", "NAI-Mover")
         skipped = settings.value("skipped_version", "")
         if skipped == new_version:
             return
 
-        dialog = UpdateDialog(new_version, download_url, release_notes, self)
+        dialog = UpdateDialog(new_version, download_url, release_notes, download_size, self)
         dialog.exec()
 
         if dialog.skip_checkbox.isChecked():
@@ -436,6 +464,66 @@ class MainWindow(QMainWindow):
         cmd = ("abm",)
         self.send_command(cmd)
     """END OF COMMANDS IMPLEMENTATION """
+
+    def set_macro_progress(self, current_step: int, total_steps: int) -> None:
+        total = max(total_steps, 1)
+        value = min(max(current_step, 0), total)
+        self.macro_progress.setRange(0, total)
+        self.macro_progress.setValue(value)
+
+    def set_macro_pause_state(self, enabled: bool, paused: bool) -> None:
+        self.pause_macro_btn.setEnabled(enabled)
+        self.pause_macro_btn.setText("Resume" if paused else "Pause")
+
+    def set_connection_status(self, connected: bool) -> None:
+        self._set_connection_indicator(connected)
+
+    def _set_connection_indicator(self, connected: bool) -> None:
+        color = QColor(CONNECTION_LED_ON_COLOR if connected else CONNECTION_LED_OFF_COLOR)
+        pixmap = QPixmap(CONNECTION_LED_SIZE, CONNECTION_LED_SIZE)
+        pixmap.fill(Qt.GlobalColor.transparent)
+        painter = QPainter(pixmap)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing, True)
+        painter.setPen(Qt.PenStyle.NoPen)
+        painter.setBrush(color)
+        painter.drawEllipse(0, 0, CONNECTION_LED_SIZE, CONNECTION_LED_SIZE)
+        painter.end()
+        self._connection_led.setPixmap(pixmap)
+        self._connection_status_label.setText("Connected" if connected else "Disconnected")
+
+    def keyPressEvent(self, event):
+        if event.isAutoRepeat():
+            return
+        if not self.hasFocus():
+            return
+        key = event.key()
+        if key in (Qt.Key.Key_Left, Qt.Key.Key_Right):
+            high_speed = bool(event.modifiers() & Qt.KeyboardModifier.ShiftModifier)
+            self._jog_key_active = key
+            self._jog_key(high_speed=high_speed, reverse=key == Qt.Key.Key_Left)
+            event.accept()
+            return
+        super().keyPressEvent(event)
+
+    def keyReleaseEvent(self, event):
+        if event.isAutoRepeat():
+            return
+        if not self.hasFocus():
+            return
+        key = event.key()
+        if key in (Qt.Key.Key_Left, Qt.Key.Key_Right):
+            if self._jog_key_active == key:
+                self._jog_key_active = None
+            self.stop()
+            event.accept()
+            return
+        super().keyReleaseEvent(event)
+
+    def _jog_key(self, high_speed: bool, reverse: bool) -> None:
+        node = self.node_manager.get_motion(self.comboBox.currentText())
+        speed = node["HSValue"] if high_speed else node["Jog"]
+        command_speed = f"-{speed}" if reverse else speed
+        self.send_command(("jog", command_speed))
 
     """SYSTEM IMPLEMENTATION"""
 
@@ -512,7 +600,15 @@ class MainWindow(QMainWindow):
             #self.get_node_values()
 
     def erase_configuration(self):
-        self.send_command(("ecf",))
+        confirm = QMessageBox.question(
+            self,
+            "Erase Configuration",
+            "This will erase the controller configuration. Continue?",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            QMessageBox.StandardButton.No,
+        )
+        if confirm == QMessageBox.StandardButton.Yes:
+            self.send_command(("ecf",))
 
     def get_stage_values(self):
         self.settings.refresh_stage_values()
@@ -831,5 +927,6 @@ class MainWindow(QMainWindow):
             self.ui.com_bus_table.removeRow(self.ui.com_bus_table.rowCount() - 1)
 
     def closeEvent(self, event):
+        self._set_connection_indicator(False)
         self.serial.close()
         QApplication.closeAllWindows()

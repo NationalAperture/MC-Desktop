@@ -35,7 +35,7 @@ def get_executable_path() -> Path:
 class UpdateChecker(QObject):
     """Checks GitHub for new releases."""
 
-    update_available = Signal(str, str, str)  # new_version, download_url, release_notes
+    update_available = Signal(str, str, str, object)  # new_version, download_url, release_notes, download_size
     no_update = Signal()
     check_failed = Signal(str)  # error_message
 
@@ -89,6 +89,7 @@ class UpdateChecker(QObject):
                 # Find the appropriate download URL for this platform
                 html_url = data.get("html_url", "")
                 download_url = None
+                download_size = None
 
                 # Find platform-specific asset
                 assets = data.get("assets", [])
@@ -100,22 +101,25 @@ class UpdateChecker(QObject):
                         # Match: NAI-Mover-windows.exe, NAI-Mover.exe, or anything with .exe
                         if name.endswith(".exe"):
                             download_url = asset_url
+                            download_size = asset.get("size")
                             if "windows" in name:
                                 break  # Prefer explicitly named windows build
                     elif sys.platform == "linux":
                         # Match: NAI-Mover-linux, NAI-Mover, or anything without .exe
                         if not name.endswith(".exe") and "NAI-Mover" in asset.get("name", ""):
                             download_url = asset_url
+                            download_size = asset.get("size")
                             if "linux" in name:
                                 break  # Prefer explicitly named linux build
 
                 if not download_url:
                     logger.warning(f"No matching asset found for platform {sys.platform}, using release page")
                     download_url = html_url
+                    download_size = None
 
                 release_notes = data.get("body", "")
                 logger.info(f"Update available: {latest_version}, download: {download_url}")
-                self.update_available.emit(latest_version, download_url, release_notes)
+                self.update_available.emit(latest_version, download_url, release_notes, download_size)
             else:
                 logger.info("No update available")
                 self.no_update.emit()
