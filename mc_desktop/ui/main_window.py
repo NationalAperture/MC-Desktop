@@ -610,95 +610,6 @@ class MainWindow(QMainWindow):
         if confirm == QMessageBox.StandardButton.Yes:
             self.send_command(("ecf",))
 
-    def get_stage_values(self):
-        self.settings.refresh_stage_values()
-
-    def update_stage_values(self, *args, **kwargs):
-        self.settings.update_stage_values(*args, **kwargs)
-
-    def update_unit_travel(self, *args, **kwargs):
-        self.settings.update_unit_travel(*args, **kwargs)
-
-    def set_stage_type(self):
-        self.settings.set_stage_type()
-
-    def set_unit_travel(self):
-        self.settings.set_unit_travel()
-
-    def set_stage_gh(self):
-        self.settings.set_stage_gh()
-
-    def set_stage_tpi(self):
-        self.settings.set_stage_tpi()
-
-    def set_stage_cpr(self):
-        self.settings.set_stage_cpr()
-
-    def get_pid_values(self):
-        self.settings.refresh_pid_values()
-
-    def update_pid_values(self, *args, **kwargs):
-        self.settings.update_pid_values(*args, **kwargs)
-
-    def set_kp(self):
-        self.settings.set_kp()
-
-    def set_ki(self):
-        self.settings.set_ki()
-
-    def set_kd(self):
-        self.settings.set_kd()
-
-    def set_integrator(self):
-        self.settings.set_integrator()
-
-    def set_sample_rate(self):
-        self.settings.set_sample_rate()
-
-    def get_motion_values(self):
-        self.settings.refresh_motion_values()
-
-    def update_motion_values(self, *args, **kwargs):
-        self.settings.update_motion_values(*args, **kwargs)
-
-    def update_jog_values(self):
-        self.settings.update_jog_values()
-
-    def set_motion_accel(self):
-        self.settings.set_motion_accel()
-
-    def set_motion_vel(self):
-        self.settings.set_motion_vel()
-
-    def set_motion_decel(self):
-        self.settings.set_motion_decel()
-
-    def set_motion_err(self):
-        self.settings.set_motion_err()
-
-    def set_jog(self):
-        self.settings.set_jog()
-
-    def set_hs_jog(self):
-        self.settings.set_hs_jog()
-
-    def get_advanced_values(self):
-        self.settings.refresh_advanced_values()
-
-
-    def update_advanced_values(self, *args, **kwargs):
-        self.settings.update_advanced_values(*args, **kwargs)
-
-
-    def set_lower_limit(self):
-        self.settings.set_lower_limit()
-
-    def set_upper_limit(self):
-        self.settings.set_upper_limit()
-
-    def set_tolerance(self):
-        self.settings.set_tolerance()
-
     def set_baud_rate(self):
         baud_rate = int(self.ui.baud_rates.currentIndex() + 1)
         self.send_command((f"sbr {baud_rate}",))
@@ -766,17 +677,17 @@ class MainWindow(QMainWindow):
         self.send_command(("stg",), node_id=self.node_manager.current_node_id, callback=True)
 
     def get_values_pid(self, stage_values):
-        self.update_stage_values(stage_values)
+        self.settings.update_stage_values(stage_values)
         self.callbacks.append(self.get_values_motion)
         self.send_command(("pid",), node_id=self.node_manager.current_node_id, callback=True)
 
     def get_values_motion(self, pid_values):
-        self.update_pid_values(pid_values)
+        self.settings.update_pid_values(pid_values)
         self.callbacks.append(self.get_values_limits)
         self.send_command(("prf",), node_id=self.node_manager.current_node_id, callback=True)
 
     def get_values_limits(self, motion_values):
-        self.update_motion_values(motion_values)
+        self.settings.update_motion_values(motion_values)
         self.callbacks.append(self.get_values_type)
         self.send_command(("glm",), node_id=self.node_manager.current_node_id, callback=True)
 
@@ -786,12 +697,12 @@ class MainWindow(QMainWindow):
         self.send_command(("gut",), node_id=self.node_manager.current_node_id, callback=True)
 
     def get_values_software(self, stage):
-        self.update_unit_travel(stage)
+        self.settings.update_unit_travel(stage)
         self.callbacks.append(self.set_software_limits)
         self.send_command(("swl",), node_id=self.node_manager.current_node_id, callback=True)
 
     def set_software_limits(self, limits):
-        self.update_advanced_values(limits)
+        self.settings.update_advanced_values(limits)
 
 
     def update_node_motor_values(self, node_id, values):
