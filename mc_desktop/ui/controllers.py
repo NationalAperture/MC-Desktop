@@ -67,6 +67,18 @@ class LoopFrame:
     remaining: int
 
 
+@dataclass(frozen=True)
+class MacroCommand:
+    node_id: str
+    command: str
+    param: Optional[str] = None
+
+    def as_params(self) -> Tuple[str, ...]:
+        if self.param is None:
+            return (self.node_id, self.command)
+        return (self.node_id, self.command, self.param)
+
+
 class MacroRunner:
     """Encapsulates macro state management and execution helpers."""
 
@@ -292,42 +304,33 @@ class MacroRunner:
         return None
 
     def _dispatch_command(self, command: str) -> None:
-        parts = command.split()
-        if not parts:
+        parsed = self._parse_macro_command(command)
+        if parsed is None:
+            self._awaiting_completion = False
+            self.manage_macro()
             return
 
         self._awaiting_completion = True
-        params: Tuple[str, ...]
-        if len(parts) >= 3:
-            node_id, cmd = parts[0], parts[1]
-            param = " ".join(parts[2:]) if len(parts) > 3 else parts[2]
-            params = (node_id, cmd, param)
-            self.window.log_sent_messages(params)
-            self.window.serial.transmit_queue(
-                node_id,
-                cmd,
-                param,
-                await_completion=True,
-                context="macro",
-            )
-            self._steps_executed += 1
-            self.window.set_macro_progress(self._steps_executed, self._steps_total)
-        elif len(parts) == 2:
-            node_id, cmd = parts
-            params = (node_id, cmd)
-            self.window.log_sent_messages(params)
-            self.window.serial.transmit_queue(
-                node_id,
-                cmd,
-                await_completion=True,
-                context="macro",
-            )
-            self._steps_executed += 1
-            self.window.set_macro_progress(self._steps_executed, self._steps_total)
-        else:
+        params = parsed.as_params()
+        self.window.log_sent_messages(params)
+        self.window.serial.transmit_queue(
+            parsed.node_id,
+            parsed.command,
+            parsed.param,
+            await_completion=True,
+            context="macro",
+        )
+        self._steps_executed += 1
+        self.window.set_macro_progress(self._steps_executed, self._steps_total)
+
+    def _parse_macro_command(self, command: str) -> Optional[MacroCommand]:
+        parts = command.split()
+        if len(parts) < 2:
             self.logger.warning("Macro command '%s' is incomplete and will be skipped.", command)
-            self._awaiting_completion = False
-            self.manage_macro()
+            return None
+        node_id, cmd = parts[0], parts[1]
+        param = " ".join(parts[2:]) if len(parts) > 2 else None
+        return MacroCommand(node_id=node_id, command=cmd, param=param)
 
     def _handle_run_complete(self) -> None:
         ui = self.window.ui

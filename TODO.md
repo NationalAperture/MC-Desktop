@@ -46,9 +46,9 @@
 - [ ] **Improve error handling in serial communication**: `_process_serial_command()` catches exceptions but doesn't notify the UI. Emit an error signal to show users when commands fail.
 - [ ] **Add connection timeout handling**: `_attempt_connection()` can hang if the port is busy. Add explicit timeout and user feedback.
 - [ ] **Refactor callback chain to use signals**: The `callbacks` list pattern in `main_window.py:292,642-691` is fragile. Replace with proper Qt signals/slots or a state machine.
-- [ ] **Add proper shutdown handling**: `closeEvent()` calls `serial.close()` but doesn't wait for the worker thread to finish. Use proper thread synchronization.
+- [x] **Add proper shutdown handling**: `closeEvent()` calls `serial.close()` but doesn't wait for the worker thread to finish. Use proper thread synchronization.
 - [ ] **Validate node_id before operations**: Several methods assume `node_id` is valid. Add guards to prevent crashes when `current_node_id` is None.
-- [ ] **Use dataclasses or Pydantic for command parsing**: Macro command parsing in `_dispatch_command()` at `controllers.py:255` uses manual string splitting. Consider structured parsing.
+- [x] **Use dataclasses or Pydantic for command parsing**: Macro command parsing in `_dispatch_command()` at `controllers.py:255` uses manual string splitting. Consider structured parsing.
 - [ ] **Add retry logic for failed commands**: When serial communication fails, consider automatic retry with exponential backoff.
 - [ ] **Improve logging granularity**: Add DEBUG-level logs for serial transactions and WARNING for recoverable errors. Current logging is sparse in some areas.
 - [ ] **Add configuration file support**: Allow users to save/load application preferences (baud rate, polling interval, etc.) to a config file.
