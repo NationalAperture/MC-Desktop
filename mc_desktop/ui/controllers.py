@@ -424,13 +424,13 @@ class NodeSettingsController:
         "pos_tolerance_input": ("pos_tolerance_value", "Position Tolerance"),
     }
 
-    def __init__(self, window, logger: Optional[logging.Logger] = None) -> None:
+    def __init__(self, window: object, logger: Optional[logging.Logger] = None) -> None:
         self.window = window
         self.logger = logger or logging.getLogger(__name__)
         self._validation_labels = dict(self._DEFAULT_VALIDATION_LABELS)
 
     @staticmethod
-    def format_stage_values(stage) -> str:
+    def format_stage_values(stage: object) -> str:
         return ",".join(str(value) for value in (stage.stage, stage.travel, stage.gh, stage.tpi, stage.cpr))
 
     def snapshot_stage(self, node_id: str) -> str:
@@ -449,7 +449,7 @@ class NodeSettingsController:
         self.window.callbacks.append(self.update_stage_values)
         self.window.send_command(("stg",), callback=True)
 
-    def update_stage_values(self, *args, **__) -> None:
+    def update_stage_values(self, *args: str, **__: object) -> None:
         node_manager = self.window.node_manager
         node_id = node_manager.current_node_id
         node = node_manager.get_stage(node_id)
@@ -479,7 +479,7 @@ class NodeSettingsController:
         ui.cpr_value_label.setText(f"CPR: {cpr}")
         node.update({"CPR": cpr})
 
-    def update_unit_travel(self, *args, **__) -> None:
+    def update_unit_travel(self, *args: str, **__: object) -> None:
         node_manager = self.window.node_manager
         node_id = node_manager.current_node_id
         node = node_manager.get_stage(node_id)
@@ -543,7 +543,7 @@ class NodeSettingsController:
         self.window.callbacks.append(self.update_pid_values)
         self.window.send_command(("pid",), callback=True)
 
-    def update_pid_values(self, *args, **__) -> None:
+    def update_pid_values(self, *args: str, **__: object) -> None:
         node_manager = self.window.node_manager
         node_id = node_manager.current_node_id
         node = node_manager.get_pid(node_id)
@@ -621,7 +621,7 @@ class NodeSettingsController:
         self.window.callbacks.append(self.update_motion_values)
         self.window.send_command(("prf",), callback=True)
 
-    def update_motion_values(self, *args, **__) -> None:
+    def update_motion_values(self, *args: str, **__: object) -> None:
         node_manager = self.window.node_manager
         node_id = node_manager.current_node_id
         node = node_manager.get_motion(node_id)
@@ -712,7 +712,7 @@ class NodeSettingsController:
         self.window.callbacks.append(self.update_advanced_values)
         self.window.send_command(("swl",), callback=True)
 
-    def update_advanced_values(self, *args, **__) -> None:
+    def update_advanced_values(self, *args: str, **__: object) -> None:
         node_manager = self.window.node_manager
         node_id = node_manager.current_node_id
         node = node_manager.get_advanced(node_id)

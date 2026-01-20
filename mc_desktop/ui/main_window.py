@@ -4,15 +4,18 @@
 #     pyside6-uic form.ui -o ui_form.py, or
 #     pyside2-uic form.ui -o ui_form.py
 
+from __future__ import annotations
+
 import csv
 import sys
 import os
 import logging
 from collections import deque
 from datetime import datetime
+from typing import Callable, Optional, Sequence
 
 from PySide6.QtCore import Qt, QSettings, QTimer
-from PySide6.QtGui import QAction, QColor, QFont, QKeySequence, QPainter, QPixmap, QShortcut
+from PySide6.QtGui import QAction, QColor, QCloseEvent, QFont, QKeyEvent, QKeySequence, QPainter, QPixmap, QShortcut
 from PySide6.QtWidgets import (
     QApplication,
     QComboBox,
@@ -20,6 +23,7 @@ from PySide6.QtWidgets import (
     QFileDialog,
     QInputDialog,
     QLabel,
+    QLayout,
     QMainWindow,
     QMessageBox,
     QPushButton,
@@ -48,7 +52,7 @@ CONNECTION_LED_SIZE = 10
 CONNECTION_LED_ON_COLOR = "#2ecc71"
 CONNECTION_LED_OFF_COLOR = "#e74c3c"
 
-def clear_layout(layout, delete_widgets):
+def clear_layout(layout: QLayout, delete_widgets: bool) -> None:
     for i in reversed(range(layout.count())):
         if layout.itemAt(i).widget():
             widget_to_remove = layout.itemAt(i).widget()
@@ -67,7 +71,7 @@ def clear_layout(layout, delete_widgets):
             if delete_widgets:
                 item_to_remove.deleteLater()
 
-def candidate_ports():
+def candidate_ports() -> list[tuple[str, str, str]]:
         """
         Return a list of serial port candidates across Windows, Linux, and macOS.
         """
@@ -81,28 +85,28 @@ def candidate_ports():
             if sys.platform.startswith("win"):
                 # Windows: COM1, COM2, ...
                 if "com" in dev_lower:
-                    ports.append(port)
+                    ports.append((port.device, port.description, port.hwid))
 
             elif sys.platform.startswith("linux"):
                 # Linux: USB adapters (/dev/ttyUSBx), onboard UART (/dev/ttyAMAx)
                 if "ttyusb" in dev_lower or "ttyama" in dev_lower:
-                    ports.append(port)
+                    ports.append((port.device, port.description, port.hwid))
 
             elif sys.platform.startswith("darwin"):
                 # macOS: /dev/tty.* or /dev/cu.*
                 if "tty." in dev_lower or "cu." in dev_lower:
-                    ports.append(port)
+                    ports.append((port.device, port.description, port.hwid))
 
         return ports
 
 class Connection(QWidget):
-    def __init__(self, parent=None):
+    def __init__(self, parent: Optional[MainWindow] = None) -> None:
         super().__init__()
         self.ui = Ui_Connection_Form()
         self.ui.setupUi(self)
         self.__setup__(parent)
 
-    def __setup__(self, parent):
+    def __setup__(self, parent: MainWindow) -> None:
         self.parent = parent
         # self.ui.remove_node_combo.addItem("1")
         self.ui.search_ports_btn.pressed.connect(self.search_ports)
@@ -112,10 +116,10 @@ class Connection(QWidget):
         self.ui.update_node_btn.pressed.connect(self.update_node)
         self.ui.baud_rates.currentIndexChanged.connect(self.update_baudrate)
 
-    def update_baudrate(self):
+    def update_baudrate(self) -> None:
         self.parent.serial.connection.baudrate = self.ui.baud_rates.currentText()
 
-    def add_node(self):
+    def add_node(self) -> None:
         node_id = self.ui.add_node_value.text()
         if not node_id:
             return
@@ -124,7 +128,7 @@ class Connection(QWidget):
             self.parent.comboBox.setCurrentIndex(self.parent.comboBox.count() - 1)
             self.parent.get_node_values(node_id)
 
-    def remove_node(self):
+    def remove_node(self) -> None:
         node_index = self.ui.remove_node_combo.currentIndex()
         if node_index < 0:
             return
@@ -132,7 +136,7 @@ class Connection(QWidget):
         if self.parent.remove_node(node_id, node_index):
             self.ui.remove_node_combo.removeItem(node_index)
 
-    def update_node(self):
+    def update_node(self) -> None:
         # This changes the currently selected node's id, to the new id the user has just entered.
         current_node = self.parent.node_manager.current_node_id
         new_node = self.ui.update_node_value.text()
@@ -143,7 +147,7 @@ class Connection(QWidget):
                     self.ui.update_node_value.clear()
                 break
 
-    def select_port(self):
+    def select_port(self) -> None:
         port = self.ui.port_list.selectedItems()[0].text()
         self.parent.serial.port = port
         self.parent.serial.baudrate = self.ui.baud_rates.currentText()
@@ -153,7 +157,7 @@ class Connection(QWidget):
             self.ui.tabWidget.setCurrentIndex(1)
             # self.parent.get_node_values()
 
-    def search_ports(self):
+    def search_ports(self) -> None:
         self.ui.port_list.clear()
 
         ports = candidate_ports()
@@ -163,14 +167,14 @@ class Connection(QWidget):
 
 
 class MotorStats(QWidget):
-    def __init__(self, parent, title):
+    def __init__(self, parent: MainWindow, title: str) -> None:
         super().__init__()
         self.ui = Ui_Motor_Form()
         self.ui.setupUi(self)
-        self.node_id = None
+        self.node_id: Optional[str] = None
         self.__setup__(parent, title)
 
-    def __setup__(self, parent, title):
+    def __setup__(self, parent: MainWindow, title: str) -> None:
         self.parent = parent
         font = QFont()
         font.setBold(True)
@@ -182,46 +186,46 @@ class MotorStats(QWidget):
         self.ui.enable_drive_cb.clicked.connect(self.set_drive)
         self.ui.limit_behavior_cb.currentIndexChanged.connect(self.limit_behavior_updated)
 
-    def set_limit_behavior(self, behavior):
+    def set_limit_behavior(self, behavior: str) -> None:
         self.ui.limit_behavior_cb.blockSignals(True)
         for index in range(self.ui.limit_behavior_cb.count()):
             if behavior == self.ui.limit_behavior_cb.itemText(index):
                 self.ui.limit_behavior_cb.setCurrentIndex(index)
         self.ui.limit_behavior_cb.blockSignals(False)
 
-    def limit_behavior_updated(self):
+    def limit_behavior_updated(self) -> None:
         index = self.ui.limit_behavior_cb.currentIndex() + 1
         self.parent.limit_behavior_updated(str(index), self.node_id)
 
-    def set_jog(self):
+    def set_jog(self) -> None:
         if self.ui.hs_jog_cb.isChecked():
             self.parent.toggle_jog(True, self.node_id)
         else:
             self.parent.toggle_jog(False, self.node_id)
 
-    def set_drive(self):
+    def set_drive(self) -> None:
         if self.ui.enable_drive_cb.isChecked():
             self.parent.toggle_drive(True, self.node_id)
         else:
             self.parent.toggle_drive(False, self.node_id)
 
-    def set_front_lmt(self):
+    def set_front_lmt(self) -> None:
         if self.ui.front_lmt_cb.isChecked():
             self.parent.toggle_front_lmt(True, self.node_id)
         else:
             self.parent.toggle_front_lmt(False, self.node_id)
 
-    def set_rear_lmt(self):
+    def set_rear_lmt(self) -> None:
         if self.ui.rear_lmt_cb.isChecked():
             self.parent.toggle_rear_lmt(True, self.node_id)
         else:
             self.parent.toggle_rear_lmt(False, self.node_id)
 
-    def set_group_box_title(self, title):
+    def set_group_box_title(self, title: str) -> None:
         self.node_id = title
         self.ui.node_id.setTitle(f"Node ID: {self.node_id}")
 
-    def update_motor_values(self, value):
+    def update_motor_values(self, value: str) -> None:
         try:
             pos = value
             self.ui.position.setText(pos)
@@ -232,32 +236,32 @@ class MotorStats(QWidget):
             logger.error(f"Value received for motor: {value}")
 
 class RecordBus(QDialog):
-    def __init__(self, parent=None):
+    def __init__(self, parent: Optional[MainWindow] = None) -> None:
         super().__init__(parent)
         self.ui = Ui_RecordBus_Dialog()
         self.ui.setupUi(self)
         self.__setup__(parent)
 
-    def __setup__(self, parent):
+    def __setup__(self, parent: MainWindow) -> None:
         self.parent = parent
         self.setWindowTitle("Record Bus")
         self.ui.whole_table_rb.clicked.connect(self.selected_whole_table)
         self.ui.selected_row_rb.clicked.connect(self.selected_range)
         self.ui.buttonBox.accepted.connect(self.record_data)
 
-    def selected_range(self):
+    def selected_range(self) -> None:
         self.ui.label.setEnabled(True)
         self.ui.label_2.setEnabled(True)
         self.ui.start_row_value.setEnabled(True)
         self.ui.end_row_value.setEnabled(True)
 
-    def selected_whole_table(self):
+    def selected_whole_table(self) -> None:
         self.ui.label.setEnabled(False)
         self.ui.label_2.setEnabled(False)
         self.ui.start_row_value.setEnabled(False)
         self.ui.end_row_value.setEnabled(False)
 
-    def record_data(self):
+    def record_data(self) -> None:
         # Need to determin if whole table or just selected rows.
         # If selected rows must make sure they are within table range.
         # Have this all done in the parent.
@@ -270,28 +274,28 @@ class RecordBus(QDialog):
         pass
 
 class MainWindow(QMainWindow):
-    def __init__(self, log=None):
+    def __init__(self, log: Optional[logging.Logger] = None) -> None:
         super().__init__()
         self.ui = Ui_MainWindow()
         self.ui.setupUi(self)
         self.__setup__(log)
 
-    def __setup__(self, log):
-        self.connection = None
-        self.record = None
+    def __setup__(self, log: Optional[logging.Logger]) -> None:
+        self.connection: Optional[Connection] = None
+        self.record: Optional[RecordBus] = None
         self.serial = CommunicationManager(self, log)
         self.serial.signals.log.connect(self.log_received_messages)
         self.serial.signals.main_thread.connect(self.manage_callback)
         self.serial.signals.poll.connect(self.update_node_motor_values)
         self.node_manager = NodeManager()
-        self.motor_stats = []
+        self.motor_stats: list[MotorStats] = []
         self.verticalSpacer = QSpacerItem(20, 40, QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Expanding)
         self.ui.system_monitor.layout().addItem(self.verticalSpacer)
         self.setWindowTitle("NAI Mover")
         self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
         self.column_count = self.ui.com_bus_table.columnCount()
         self.com_bus_max_rows = COM_BUS_MAX_ROWS
-        self._pending_motor_updates = {}
+        self._pending_motor_updates: dict[str, str] = {}
         self._motor_update_timer = QTimer(self)
         self._motor_update_timer.setSingleShot(True)
         self._motor_update_timer.setInterval(MOTOR_UPDATE_THROTTLE_MS)
@@ -300,7 +304,7 @@ class MainWindow(QMainWindow):
         self.comboBox.setFont(QFont("Arial", 15))
         self.comboBox.currentIndexChanged.connect(self.selected_new_node)
         self.ui.menubar.setCornerWidget(self.comboBox, corner=Qt.Corner.TopRightCorner)
-        self.callbacks = []
+        self.callbacks: list[Callable[..., None]] = []
 
         self.macro_text = QTextEdit()
         self.macro_text.setFont(QFont("Arial", 15))
@@ -318,9 +322,9 @@ class MainWindow(QMainWindow):
         self.settings = NodeSettingsController(self, logger=log or logger)
         self.command_dispatcher = CommandDispatcher(self, self.send_command, logger=log or logger)
 
-        self.current_node_id = None
-        self.node_index = {}
-        self._jog_key_active = None
+        self.current_node_id: Optional[str] = None
+        self.node_index: dict[str, int] = {}
+        self._jog_key_active: Optional[int] = None
 
 
 
@@ -412,13 +416,13 @@ class MainWindow(QMainWindow):
         version_label = QLabel(f"v{__version__}")
         self.ui.statusbar.addPermanentWidget(version_label)
 
-    def show_connection(self):
+    def show_connection(self) -> None:
         if self.connection is None:
             self.connection = Connection(self)
         self.connection.close()
         self.connection.show()
 
-    def _check_for_updates(self):
+    def _check_for_updates(self) -> None:
         self.update_checker.check_for_updates()
 
     def _on_update_available(
@@ -427,7 +431,7 @@ class MainWindow(QMainWindow):
         download_url: str,
         release_notes: str,
         download_size: object,
-    ):
+    ) -> None:
         settings = QSettings("NAI", "NAI-Mover")
         skipped = settings.value("skipped_version", "")
         if skipped == new_version:
@@ -439,28 +443,28 @@ class MainWindow(QMainWindow):
         if dialog.skip_checkbox.isChecked():
             settings.setValue("skipped_version", new_version)
 
-    def _on_update_check_failed(self, error: str):
+    def _on_update_check_failed(self, error: str) -> None:
         logger.debug("Update check failed: %s", error)
 
     """COMMANDS IMPLEMENTATION"""
 
-    def move_cmd(self):
+    def move_cmd(self) -> None:
         cmd = ("mov",)
         self.send_command(cmd)
 
-    def forward(self):
+    def forward(self) -> None:
         node = self.node_manager.get_motion(self.comboBox.currentText())
         speed = node["Jog"]
         cmd = ("jog", speed)
         self.send_command(cmd)
 
-    def backward(self):
+    def backward(self) -> None:
         node = self.node_manager.get_motion(self.comboBox.currentText())
         speed = node["Jog"]
         cmd = ("jog", f"-{speed}")
         self.send_command(cmd)
 
-    def stop(self):
+    def stop(self) -> None:
         cmd = ("abm",)
         self.send_command(cmd)
     """END OF COMMANDS IMPLEMENTATION """
@@ -491,7 +495,7 @@ class MainWindow(QMainWindow):
         self._connection_led.setPixmap(pixmap)
         self._connection_status_label.setText("Connected" if connected else "Disconnected")
 
-    def keyPressEvent(self, event):
+    def keyPressEvent(self, event: QKeyEvent) -> None:
         if event.isAutoRepeat():
             return
         if not self.hasFocus():
@@ -505,7 +509,7 @@ class MainWindow(QMainWindow):
             return
         super().keyPressEvent(event)
 
-    def keyReleaseEvent(self, event):
+    def keyReleaseEvent(self, event: QKeyEvent) -> None:
         if event.isAutoRepeat():
             return
         if not self.hasFocus():
@@ -527,33 +531,33 @@ class MainWindow(QMainWindow):
 
     """SYSTEM IMPLEMENTATION"""
 
-    def set_limit_behavior(self, behavior):
+    def set_limit_behavior(self, behavior: str) -> None:
         motor_stat = self.motor_stats[self.comboBox.currentIndex()]
         motor_stat.set_limit_behavior(behavior)
 
-    def limit_behavior_updated(self, index, node_id):
+    def limit_behavior_updated(self, index: str, node_id: Optional[str]) -> None:
         self.send_command(("slm", index), node_id=node_id)
 
-    def toggle_jog(self, checked, node_id):
+    def toggle_jog(self, checked: bool, node_id: Optional[str]) -> None:
         node = self.node_manager.get_motion(node_id)
         if checked:
             node["Jog"] = node["HSValue"]
         else:
             node["Jog"] = node["JogValue"]
 
-    def toggle_drive(self, checked, node_id):
+    def toggle_drive(self, checked: bool, node_id: Optional[str]) -> None:
         if checked:
             self.send_command(("ena", "1"), node_id=node_id)
         else:
             self.send_command(("ena", "0"), node_id=node_id)
 
-    def toggle_front_lmt(self, checked, node_id):
+    def toggle_front_lmt(self, checked: bool, node_id: Optional[str]) -> None:
         if checked:
             self.send_command(("ena", "1"), node_id=node_id)
         else:
             self.send_command(("ena", "0"), node_id=node_id)
 
-    def toggle_rear_lmt(self, checked, node_id):
+    def toggle_rear_lmt(self, checked: bool, node_id: Optional[str]) -> None:
         if checked:
             self.send_command(("ena", "1"), node_id=node_id)
         else:
@@ -561,7 +565,7 @@ class MainWindow(QMainWindow):
     """END OF SYSTEM IMPLEMENTATION"""
 
     """ SETTINGS IMPLEMENTATION """
-    def selected_node_change(self, node_id, get_values=False):
+    def selected_node_change(self, node_id: str, get_values: bool = False) -> None:
         if get_values:
             sn, vn = self.node_manager.get_config_values(node_id)
             self.set_serial_number(sn)
@@ -576,30 +580,30 @@ class MainWindow(QMainWindow):
             advanced = self.settings.snapshot_advanced(node_id)
             self.settings.update_advanced_values(advanced)
 
-    def set_serial_number(self, serial_number):
+    def set_serial_number(self, serial_number: str) -> None:
         self.ui.SN_label.setText(serial_number)
         node_id = self.node_manager.current_node_id
         node = self.node_manager.get_config(node_id)
         node.update({"SN": serial_number})
 
-    def set_version_number(self, version_number):
+    def set_version_number(self, version_number: str) -> None:
         self.ui.VN_label.setText(version_number)
         node_id = self.node_manager.current_node_id
         node = self.node_manager.get_config(node_id)
         node.update({"VN": version_number})
 
-    def save_configuration(self):
+    def save_configuration(self) -> None:
         value, ok = QInputDialog.getText(self, "Save Configuration", "Choose a number between 1 and 16")
         if ok:
             self.send_command(("scf", value))
 
-    def load_configuration(self):
+    def load_configuration(self) -> None:
         value, ok = QInputDialog.getText(self, "Load Configuration", "Choose a number between 1 and 16")
         if ok:
             self.send_command(("lcf", value))
             #self.get_node_values()
 
-    def erase_configuration(self):
+    def erase_configuration(self) -> None:
         confirm = QMessageBox.question(
             self,
             "Erase Configuration",
@@ -610,7 +614,7 @@ class MainWindow(QMainWindow):
         if confirm == QMessageBox.StandardButton.Yes:
             self.send_command(("ecf",))
 
-    def set_baud_rate(self):
+    def set_baud_rate(self) -> None:
         baud_rate = int(self.ui.baud_rates.currentIndex() + 1)
         self.send_command((f"sbr {baud_rate}",))
         node_id = self.node_manager.current_node_id
@@ -620,7 +624,7 @@ class MainWindow(QMainWindow):
 
     """END OF SETTINGS IMPLEMENTATION """
 
-    def record_data(self, start=None, end=None):
+    def record_data(self, start: Optional[int] = None, end: Optional[int] = None) -> None:
         if start and end:
             path, ok = QFileDialog.getSaveFileName(
                 self, 'Save CSV', os.getenv('HOME'), 'CSV(*.csv)')
@@ -653,59 +657,59 @@ class MainWindow(QMainWindow):
                             self.ui.com_bus_table.item(row, column).text()
                             for column in columns)
 
-    def manage_callback(self, *args, **kwargs):
+    def manage_callback(self, *args: object, **kwargs: object) -> None:
         if self.callbacks:
             callback = self.callbacks.pop(0)
             callback(*args, **kwargs)
 
-    def get_node_values(self, node_id=None):
+    def get_node_values(self, node_id: Optional[str] = None) -> None:
         self.node_manager.current_node_id = node_id
         self.get_serial_number()
 
-    def get_serial_number(self):
+    def get_serial_number(self) -> None:
         self.callbacks.append(self.get_version_number)
         self.send_command(("srn",), node_id=self.node_manager.current_node_id, callback=True)
 
-    def get_version_number(self, serial_number):
+    def get_version_number(self, serial_number: str) -> None:
         self.set_serial_number(serial_number)
         self.callbacks.append(self.get_values_stage)
         self.send_command(("vrn",), node_id=self.node_manager.current_node_id, callback=True)
 
-    def get_values_stage(self, version_number):
+    def get_values_stage(self, version_number: str) -> None:
         self.set_version_number(version_number)
         self.callbacks.append(self.get_values_pid)
         self.send_command(("stg",), node_id=self.node_manager.current_node_id, callback=True)
 
-    def get_values_pid(self, stage_values):
+    def get_values_pid(self, stage_values: str) -> None:
         self.settings.update_stage_values(stage_values)
         self.callbacks.append(self.get_values_motion)
         self.send_command(("pid",), node_id=self.node_manager.current_node_id, callback=True)
 
-    def get_values_motion(self, pid_values):
+    def get_values_motion(self, pid_values: str) -> None:
         self.settings.update_pid_values(pid_values)
         self.callbacks.append(self.get_values_limits)
         self.send_command(("prf",), node_id=self.node_manager.current_node_id, callback=True)
 
-    def get_values_limits(self, motion_values):
+    def get_values_limits(self, motion_values: str) -> None:
         self.settings.update_motion_values(motion_values)
         self.callbacks.append(self.get_values_type)
         self.send_command(("glm",), node_id=self.node_manager.current_node_id, callback=True)
 
-    def get_values_type(self, limits):
+    def get_values_type(self, limits: str) -> None:
         self.set_limit_behavior(limits)
         self.callbacks.append(self.get_values_software)
         self.send_command(("gut",), node_id=self.node_manager.current_node_id, callback=True)
 
-    def get_values_software(self, stage):
+    def get_values_software(self, stage: str) -> None:
         self.settings.update_unit_travel(stage)
         self.callbacks.append(self.set_software_limits)
         self.send_command(("swl",), node_id=self.node_manager.current_node_id, callback=True)
 
-    def set_software_limits(self, limits):
+    def set_software_limits(self, limits: str) -> None:
         self.settings.update_advanced_values(limits)
 
 
-    def update_node_motor_values(self, node_id, values):
+    def update_node_motor_values(self, node_id: str, values: str) -> None:
         self._pending_motor_updates[node_id] = values
         if self._motor_update_timer.isActive():
             return
@@ -713,7 +717,7 @@ class MainWindow(QMainWindow):
         self._pending_motor_updates.pop(node_id, None)
         self._motor_update_timer.start()
 
-    def _flush_pending_motor_updates(self):
+    def _flush_pending_motor_updates(self) -> None:
         pending = self._pending_motor_updates
         self._pending_motor_updates = {}
         for node_id, values in pending.items():
@@ -721,13 +725,13 @@ class MainWindow(QMainWindow):
         if self._pending_motor_updates:
             self._motor_update_timer.start()
 
-    def _apply_motor_update(self, node_id, values):
+    def _apply_motor_update(self, node_id: str, values: str) -> None:
         node_index = self.node_index.get(node_id)
         if node_index is not None and node_index >= 0:
             motor_stat = self.motor_stats[node_index]
             motor_stat.update_motor_values(values)
 
-    def add_node(self, node_id):
+    def add_node(self, node_id: str) -> bool:
         if not node_id:
             return False
         added = self.node_manager.add_node(node_id)
@@ -741,7 +745,7 @@ class MainWindow(QMainWindow):
         self.repopulate_layout()
         return True
 
-    def remove_node(self, node_id, index):
+    def remove_node(self, node_id: str, index: int) -> bool:
         if index < 0 or index >= self.comboBox.count():
             return False
         removed = self.node_manager.remove_node(node_id)
@@ -762,13 +766,13 @@ class MainWindow(QMainWindow):
         self.repopulate_layout()
         return True
 
-    def repopulate_layout(self):
+    def repopulate_layout(self) -> None:
         clear_layout(self.ui.system_monitor.layout(), False)
         for motor_stat in self.motor_stats:
             self.ui.system_monitor.layout().addWidget(motor_stat)
         self.ui.system_monitor.layout().addItem(self.verticalSpacer)
 
-    def update_node_id(self, index, old_node_id, new_node_id):
+    def update_node_id(self, index: int, old_node_id: str, new_node_id: str) -> bool:
         if not new_node_id or new_node_id == old_node_id:
             return False
 
@@ -790,28 +794,33 @@ class MainWindow(QMainWindow):
         self.send_command(cmd)
         return True
 
-    def _rebuild_node_index(self):
+    def _rebuild_node_index(self) -> None:
         self.node_index = {self.comboBox.itemText(i): i for i in range(self.comboBox.count())}
 
-    def selected_new_node(self):
+    def selected_new_node(self) -> None:
         node_id = self.comboBox.currentText()
         self.serial.node_id = node_id
         self.node_manager.current_node_id = node_id
         self.selected_node_change(node_id, True)
 
     @staticmethod
-    def _connect_signals(*connections):
+    def _connect_signals(*connections: tuple[object, Callable[..., object]]) -> None:
         for signal, slot in connections:
             signal.connect(slot)
 
-    def send_command(self, command, node_id=None, callback=False):
+    def send_command(
+        self,
+        command: tuple[str, ...],
+        node_id: Optional[str] = None,
+        callback: bool = False,
+    ) -> None:
         if node_id is None:
             node_id = self.node_manager.current_node_id
         msg = (node_id,) + command
         self.serial.transmit_queue(*msg, callback=callback)
         self.log_sent_messages(msg)
 
-    def log_sent_messages(self, message):
+    def log_sent_messages(self, message: Sequence[str]) -> None:
         #ToDo: Look to see if I can combine this function with the received one.
         #   The only difference is added the PC for "Device".
         self.ui.com_bus_table.insertRow(0)
@@ -824,7 +833,7 @@ class MainWindow(QMainWindow):
             col += 1
         self._trim_com_bus_table()
 
-    def log_received_messages(self, message):
+    def log_received_messages(self, message: str) -> None:
         self.ui.com_bus_table.insertRow(0)
         timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         items = (f"Node Id: {self.node_manager.current_node_id}", message, timestamp)
@@ -833,11 +842,11 @@ class MainWindow(QMainWindow):
             self.ui.com_bus_table.setItem(0, col, item)
         self._trim_com_bus_table()
 
-    def _trim_com_bus_table(self):
+    def _trim_com_bus_table(self) -> None:
         while self.ui.com_bus_table.rowCount() > self.com_bus_max_rows:
             self.ui.com_bus_table.removeRow(self.ui.com_bus_table.rowCount() - 1)
 
-    def closeEvent(self, event):
+    def closeEvent(self, event: QCloseEvent) -> None:
         self._set_connection_indicator(False)
-        self.serial.close()
+        self.serial.close(wait=True, timeout_ms=2000)
         QApplication.closeAllWindows()

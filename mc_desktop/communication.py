@@ -122,6 +122,7 @@ class CommunicationManager:
         self._stop_token = object()
         self._transport = SerialTransport(self.logger)
         self.node_id = "0"
+        self._worker: Optional[Worker] = None
         self.polling_callback = None
         self.logging_callback = None
         self.in_motion = False
@@ -181,14 +182,18 @@ class CommunicationManager:
         worker_0 = Worker(self.transmit)
         # worker_1 = Worker(self.send_cmd)
         self._alive = True
+        self._worker = worker_0
         self.threadpool.start(worker_0)
         # self.threadpool.start(worker_1)
 
-    def close(self):
+    def close(self, *, wait: bool = True, timeout_ms: int = 2000) -> None:
         self._alive = False
         self._command_queue.put(self._stop_token)
         self._transport.close()
         self.connection = None
+        if wait and self.threadpool and self._worker:
+            if not self.threadpool.waitForDone(timeout_ms):
+                self.logger.warning("Serial worker did not exit within %sms.", timeout_ms)
 
     def transmit_queue(self, node_id, cmd, param=None, *, callback=False, await_completion=False, context=None):
         if cmd is None:
