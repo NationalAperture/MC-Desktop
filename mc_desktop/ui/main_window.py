@@ -35,6 +35,26 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 from ..communication import CommunicationManager
+from ..commands import (
+    CMD_ABORT_MOTION,
+    CMD_ENABLE_DRIVE,
+    CMD_GET_LIMIT_BEHAVIOR,
+    CMD_GET_MOTION_VALUES,
+    CMD_GET_PID_VALUES,
+    CMD_GET_SERIAL_NUMBER,
+    CMD_GET_SOFT_LIMITS,
+    CMD_GET_STAGE_VALUES,
+    CMD_GET_UNIT_TRAVEL,
+    CMD_GET_VERSION_NUMBER,
+    CMD_JOG,
+    CMD_LOAD_CONFIG,
+    CMD_MOVE,
+    CMD_SAVE_CONFIG,
+    CMD_SET_ADDRESS,
+    CMD_SET_BAUD_RATE,
+    CMD_SET_LIMIT_BEHAVIOR,
+    CMD_ERASE_CONFIG,
+)
 from ..node_manager import NodeManager
 from ..updater import UpdateChecker
 from ..version import __version__
@@ -449,23 +469,23 @@ class MainWindow(QMainWindow):
     """COMMANDS IMPLEMENTATION"""
 
     def move_cmd(self) -> None:
-        cmd = ("mov",)
+        cmd = (CMD_MOVE,)
         self.send_command(cmd)
 
     def forward(self) -> None:
         node = self.node_manager.get_motion(self.comboBox.currentText())
         speed = node["Jog"]
-        cmd = ("jog", speed)
+        cmd = (CMD_JOG, speed)
         self.send_command(cmd)
 
     def backward(self) -> None:
         node = self.node_manager.get_motion(self.comboBox.currentText())
         speed = node["Jog"]
-        cmd = ("jog", f"-{speed}")
+        cmd = (CMD_JOG, f"-{speed}")
         self.send_command(cmd)
 
     def stop(self) -> None:
-        cmd = ("abm",)
+        cmd = (CMD_ABORT_MOTION,)
         self.send_command(cmd)
     """END OF COMMANDS IMPLEMENTATION """
 
@@ -527,7 +547,7 @@ class MainWindow(QMainWindow):
         node = self.node_manager.get_motion(self.comboBox.currentText())
         speed = node["HSValue"] if high_speed else node["Jog"]
         command_speed = f"-{speed}" if reverse else speed
-        self.send_command(("jog", command_speed))
+        self.send_command((CMD_JOG, command_speed))
 
     """SYSTEM IMPLEMENTATION"""
 
@@ -536,7 +556,7 @@ class MainWindow(QMainWindow):
         motor_stat.set_limit_behavior(behavior)
 
     def limit_behavior_updated(self, index: str, node_id: Optional[str]) -> None:
-        self.send_command(("slm", index), node_id=node_id)
+        self.send_command((CMD_SET_LIMIT_BEHAVIOR, index), node_id=node_id)
 
     def toggle_jog(self, checked: bool, node_id: Optional[str]) -> None:
         node = self.node_manager.get_motion(node_id)
@@ -547,21 +567,21 @@ class MainWindow(QMainWindow):
 
     def toggle_drive(self, checked: bool, node_id: Optional[str]) -> None:
         if checked:
-            self.send_command(("ena", "1"), node_id=node_id)
+            self.send_command((CMD_ENABLE_DRIVE, "1"), node_id=node_id)
         else:
-            self.send_command(("ena", "0"), node_id=node_id)
+            self.send_command((CMD_ENABLE_DRIVE, "0"), node_id=node_id)
 
     def toggle_front_lmt(self, checked: bool, node_id: Optional[str]) -> None:
         if checked:
-            self.send_command(("ena", "1"), node_id=node_id)
+            self.send_command((CMD_ENABLE_DRIVE, "1"), node_id=node_id)
         else:
-            self.send_command(("ena", "0"), node_id=node_id)
+            self.send_command((CMD_ENABLE_DRIVE, "0"), node_id=node_id)
 
     def toggle_rear_lmt(self, checked: bool, node_id: Optional[str]) -> None:
         if checked:
-            self.send_command(("ena", "1"), node_id=node_id)
+            self.send_command((CMD_ENABLE_DRIVE, "1"), node_id=node_id)
         else:
-            self.send_command(("ena", "0"), node_id=node_id)
+            self.send_command((CMD_ENABLE_DRIVE, "0"), node_id=node_id)
     """END OF SYSTEM IMPLEMENTATION"""
 
     """ SETTINGS IMPLEMENTATION """
@@ -595,12 +615,12 @@ class MainWindow(QMainWindow):
     def save_configuration(self) -> None:
         value, ok = QInputDialog.getText(self, "Save Configuration", "Choose a number between 1 and 16")
         if ok:
-            self.send_command(("scf", value))
+            self.send_command((CMD_SAVE_CONFIG, value))
 
     def load_configuration(self) -> None:
         value, ok = QInputDialog.getText(self, "Load Configuration", "Choose a number between 1 and 16")
         if ok:
-            self.send_command(("lcf", value))
+            self.send_command((CMD_LOAD_CONFIG, value))
             #self.get_node_values()
 
     def erase_configuration(self) -> None:
@@ -612,11 +632,11 @@ class MainWindow(QMainWindow):
             QMessageBox.StandardButton.No,
         )
         if confirm == QMessageBox.StandardButton.Yes:
-            self.send_command(("ecf",))
+            self.send_command((CMD_ERASE_CONFIG,))
 
     def set_baud_rate(self) -> None:
         baud_rate = int(self.ui.baud_rates.currentIndex() + 1)
-        self.send_command((f"sbr {baud_rate}",))
+        self.send_command((f"{CMD_SET_BAUD_RATE} {baud_rate}",))
         node_id = self.node_manager.current_node_id
         node = self.node_manager.get_advanced(node_id)
         node.update({"Baud_Rate": baud_rate})
@@ -668,42 +688,42 @@ class MainWindow(QMainWindow):
 
     def get_serial_number(self) -> None:
         self.callbacks.append(self.get_version_number)
-        self.send_command(("srn",), node_id=self.node_manager.current_node_id, callback=True)
+        self.send_command((CMD_GET_SERIAL_NUMBER,), node_id=self.node_manager.current_node_id, callback=True)
 
     def get_version_number(self, serial_number: str) -> None:
         self.set_serial_number(serial_number)
         self.callbacks.append(self.get_values_stage)
-        self.send_command(("vrn",), node_id=self.node_manager.current_node_id, callback=True)
+        self.send_command((CMD_GET_VERSION_NUMBER,), node_id=self.node_manager.current_node_id, callback=True)
 
     def get_values_stage(self, version_number: str) -> None:
         self.set_version_number(version_number)
         self.callbacks.append(self.get_values_pid)
-        self.send_command(("stg",), node_id=self.node_manager.current_node_id, callback=True)
+        self.send_command((CMD_GET_STAGE_VALUES,), node_id=self.node_manager.current_node_id, callback=True)
 
     def get_values_pid(self, stage_values: str) -> None:
         self.settings.update_stage_values(stage_values)
         self.callbacks.append(self.get_values_motion)
-        self.send_command(("pid",), node_id=self.node_manager.current_node_id, callback=True)
+        self.send_command((CMD_GET_PID_VALUES,), node_id=self.node_manager.current_node_id, callback=True)
 
     def get_values_motion(self, pid_values: str) -> None:
         self.settings.update_pid_values(pid_values)
         self.callbacks.append(self.get_values_limits)
-        self.send_command(("prf",), node_id=self.node_manager.current_node_id, callback=True)
+        self.send_command((CMD_GET_MOTION_VALUES,), node_id=self.node_manager.current_node_id, callback=True)
 
     def get_values_limits(self, motion_values: str) -> None:
         self.settings.update_motion_values(motion_values)
         self.callbacks.append(self.get_values_type)
-        self.send_command(("glm",), node_id=self.node_manager.current_node_id, callback=True)
+        self.send_command((CMD_GET_LIMIT_BEHAVIOR,), node_id=self.node_manager.current_node_id, callback=True)
 
     def get_values_type(self, limits: str) -> None:
         self.set_limit_behavior(limits)
         self.callbacks.append(self.get_values_software)
-        self.send_command(("gut",), node_id=self.node_manager.current_node_id, callback=True)
+        self.send_command((CMD_GET_UNIT_TRAVEL,), node_id=self.node_manager.current_node_id, callback=True)
 
     def get_values_software(self, stage: str) -> None:
         self.settings.update_unit_travel(stage)
         self.callbacks.append(self.set_software_limits)
-        self.send_command(("swl",), node_id=self.node_manager.current_node_id, callback=True)
+        self.send_command((CMD_GET_SOFT_LIMITS,), node_id=self.node_manager.current_node_id, callback=True)
 
     def set_software_limits(self, limits: str) -> None:
         self.settings.update_advanced_values(limits)
@@ -790,7 +810,7 @@ class MainWindow(QMainWindow):
         self.serial.node_id = new_node_id
         self._rebuild_node_index()
 
-        cmd = ("adr", new_node_id)
+        cmd = (CMD_SET_ADDRESS, new_node_id)
         self.send_command(cmd)
         return True
 

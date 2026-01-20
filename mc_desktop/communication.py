@@ -10,6 +10,7 @@ from typing import Optional, Union, Any
 from PySide6.QtCore import QRunnable, Signal, Slot, QObject, QThreadPool
 from PySide6.QtWidgets import QMessageBox
 
+from .commands import CMD_POSITION, CMD_STATUS
 
 class WorkerSignals(QObject):
     finished = Signal()
@@ -323,7 +324,7 @@ class CommunicationManager:
         if not self.connection:
             return
         try:
-            self._transport.write(f"{self.node_id} pos\r\n")
+            self._transport.write(f"{self.node_id} {CMD_POSITION}\r\n")
             pos = self._transport.read_line()
         except serial.SerialException as exc:
             self.logger.exception("Failed to poll node %s position: %s", self.node_id, exc)
@@ -337,7 +338,7 @@ class CommunicationManager:
             return None
 
         try:
-            self._transport.write(f"{self.node_id} sts\r\n")
+            self._transport.write(f"{self.node_id} {CMD_STATUS}\r\n")
             status = self._transport.read_line()
         except serial.SerialException as exc:
             self.logger.exception("Failed to check status for node %s: %s", self.node_id, exc)
