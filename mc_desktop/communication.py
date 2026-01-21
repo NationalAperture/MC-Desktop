@@ -233,6 +233,8 @@ class CommunicationManager:
         await_completion=False,
         context=None,
     ) -> Optional[str]:
+        if not self._worker_running and self.connection:
+            self._restart_worker()
         if not self.is_worker_alive():
             self.logger.error("Serial worker is not running; cannot queue command.")
             self._handle_connection_failure("Worker thread not running")
@@ -306,13 +308,22 @@ class CommunicationManager:
     def _on_worker_finished(self) -> None:
         if not self._alive:
             return
-        self._alive = False
-        self._worker = None
         self._worker_running = False
-        self._handle_connection_failure("Worker thread died unexpectedly")
+        self._worker = None
+        self.logger.debug("Worker thread exited (idle timeout)")
 
     def is_worker_alive(self) -> bool:
         return self._alive and self._worker is not None and self._worker_running
+
+    def _restart_worker(self) -> None:
+        if not self.threadpool:
+            self.threadpool = QThreadPool.globalInstance()
+        worker = Worker(self.transmit)
+        worker.signals.finished.connect(self._on_worker_finished)
+        self._worker = worker
+        self._worker_running = True
+        self.threadpool.start(worker)
+        self.logger.debug("Worker thread restarted")
 
     def _record_failure(self, reason: str) -> None:
         self._consecutive_failures += 1

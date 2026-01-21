@@ -51,15 +51,15 @@ def test_idle_poll_interval_resets_on_motion():
     assert manager._idle_poll_idle_streak == 0
 
 
-def test_worker_finished_marks_connection_lost():
+def test_worker_finished_marks_worker_stopped():
     manager = CommunicationManager(parent=object(), logger=logging.getLogger("test_comm"))
     manager.connection = SimpleNamespace(is_open=True)
     manager._transport = SimpleNamespace(close=lambda: None)
     manager._alive = True
     manager._worker = object()
+    manager._worker_running = True
 
     manager._on_worker_finished()
 
-    assert manager._alive is False
     assert manager._worker is None
-    assert manager.connection is None
+    assert manager._worker_running is False

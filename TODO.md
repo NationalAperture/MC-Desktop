@@ -25,35 +25,29 @@
 
   **Files**: `mc_desktop/communication.py` (lines 137, 380-398), `mc_desktop/ui/main_window.py` (line 763)
 
-- [ ] **Monitor worker thread death**: The worker's `finished` signal is emitted when `transmit()` exits but is never connected to a handler. If the worker dies unexpectedly (crash, unhandled exception), `_alive` remains `True` and commands queue up but are never processed.
+- [ ] **Lazy restart worker thread on demand**: The worker thread dies after extended inactivity (QThreadPool expiry). Allow this to happen silently and restart the thread when a new command is queued.
 
-  **Symptoms**: Commands appear in communication table but never transmit. No errors shown.
+  **Symptoms**: Commands appear in communication table but never transmit after long idle period.
 
-  **Proposed Fix**:
-  1. Connect `worker.signals.finished` to a handler in `setup_thread()`
-  2. In the handler, check if `_alive` is still `True` (unexpected death)
-  3. If unexpected, emit `connection_lost` signal with reason "Worker thread died unexpectedly"
-  4. Optionally attempt automatic restart of the worker thread
+  **Implementation Steps**:
+  1. Add `_worker_running: bool = False` flag to `CommunicationManager.__init__()`
+  2. Connect `worker.signals.finished` to `_on_worker_finished()` in `setup_thread()`
+  3. In `_on_worker_finished()`:
+     - Set `_worker_running = False`
+     - Log at DEBUG level: "Worker thread exited (idle timeout)"
+     - Do NOT emit error signals (this is expected behavior)
+  4. In `transmit_queue()`, before adding to queue:
+     - Check `if not self._worker_running and self.connection:`
+     - If worker is dead but connection exists, call `_restart_worker()`
+  5. Add `_restart_worker()` method:
+     - Create new Worker with `transmit` function
+     - Set `_worker_running = True`
+     - Start worker via `threadpool.start()`
+     - Log: "Worker thread restarted"
+  6. Update `setup_thread()` to set `_worker_running = True`
+  7. Update `close()` to set `_worker_running = False`
 
-  **Files**: `mc_desktop/communication.py` (lines 195-206)
-
-- [ ] **Add serial write timeout**: The serial port is opened with a 0.5s read timeout but no write timeout. Writes to a stale/disconnected port can block indefinitely on some systems.
-
-  **Proposed Fix**:
-  1. Add `write_timeout=1.0` parameter to `serial.Serial()` constructor in `SerialTransport.open()`
-  2. Handle `serial.SerialTimeoutException` in write operations
-
-  **Files**: `mc_desktop/communication.py` (line 63)
-
-- [ ] **Add worker thread health check**: After extended idle periods (10+ minutes), there's no verification that the worker thread is still alive before queuing commands.
-
-  **Proposed Fix**:
-  1. Add `is_worker_alive()` method that checks if the worker thread is still running
-  2. Check `QThreadPool.activeThreadCount()` or track worker state via `finished` signal
-  3. In `transmit_queue()`, verify worker is alive and restart if necessary
-  4. Alternatively, add periodic heartbeat logging in the transmit loop
-
-  **Files**: `mc_desktop/communication.py` (lines 218-248)
+  **Files**: `mc_desktop/communication.py` (lines 126-147, 195-206, 218-248)
 
 - [ ] **Log commands after transmission, not before**: Commands are logged to the communication table in controllers BEFORE being queued, so failed/discarded commands still appear as "sent".
 
