@@ -1,4 +1,5 @@
 import logging
+from types import SimpleNamespace
 
 import pytest
 
@@ -24,8 +25,9 @@ class _FakeTransport:
 
 def test_poll_latency_benchmark(benchmark):
     manager = CommunicationManager(parent=object(), logger=logging.getLogger("bench_poll"))
-    manager.connection = object()
+    manager.connection = SimpleNamespace(is_open=True)
     manager._transport = _FakeTransport(response="1")
+    manager.enable_polling()
 
     benchmark(manager.poll)
 

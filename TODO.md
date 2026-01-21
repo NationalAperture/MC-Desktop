@@ -9,6 +9,63 @@
 
 ---
 
+## Bug Fixes (High Priority)
+
+- [x] **Defer idle polling until a node is added**: After opening the serial port, `_poll_idle()` is called within 0.5s using the default `node_id="0"`, but no node has been added yet. This causes status polling to fail immediately on connection.
+
+  **Root Cause**: `setup_connection()` starts the worker thread which begins the `transmit()` loop. After the first queue timeout (0.5s), `_poll_idle()` calls `check_status()` with `node_id="0"` - a node that doesn't exist on the device.
+
+  **Proposed Fix**:
+  1. Add `_polling_enabled: bool = False` flag to `CommunicationManager.__init__()`
+  2. In `_poll_idle()` and `poll()`, return early if `not self._polling_enabled`
+  3. Add `enable_polling()` method that sets `_polling_enabled = True`
+  4. Call `serial.enable_polling()` from `MainWindow.add_node()` when the first node is added
+
+  **Alternative**: Check `self.parent.node_manager.has_nodes()` in `_poll_idle()` before polling, but this adds coupling between CommunicationManager and NodeManager.
+
+  **Files**: `mc_desktop/communication.py` (lines 137, 380-398), `mc_desktop/ui/main_window.py` (line 763)
+
+- [ ] **Monitor worker thread death**: The worker's `finished` signal is emitted when `transmit()` exits but is never connected to a handler. If the worker dies unexpectedly (crash, unhandled exception), `_alive` remains `True` and commands queue up but are never processed.
+
+  **Symptoms**: Commands appear in communication table but never transmit. No errors shown.
+
+  **Proposed Fix**:
+  1. Connect `worker.signals.finished` to a handler in `setup_thread()`
+  2. In the handler, check if `_alive` is still `True` (unexpected death)
+  3. If unexpected, emit `connection_lost` signal with reason "Worker thread died unexpectedly"
+  4. Optionally attempt automatic restart of the worker thread
+
+  **Files**: `mc_desktop/communication.py` (lines 195-206)
+
+- [ ] **Add serial write timeout**: The serial port is opened with a 0.5s read timeout but no write timeout. Writes to a stale/disconnected port can block indefinitely on some systems.
+
+  **Proposed Fix**:
+  1. Add `write_timeout=1.0` parameter to `serial.Serial()` constructor in `SerialTransport.open()`
+  2. Handle `serial.SerialTimeoutException` in write operations
+
+  **Files**: `mc_desktop/communication.py` (line 63)
+
+- [ ] **Add worker thread health check**: After extended idle periods (10+ minutes), there's no verification that the worker thread is still alive before queuing commands.
+
+  **Proposed Fix**:
+  1. Add `is_worker_alive()` method that checks if the worker thread is still running
+  2. Check `QThreadPool.activeThreadCount()` or track worker state via `finished` signal
+  3. In `transmit_queue()`, verify worker is alive and restart if necessary
+  4. Alternatively, add periodic heartbeat logging in the transmit loop
+
+  **Files**: `mc_desktop/communication.py` (lines 218-248)
+
+- [ ] **Log commands after transmission, not before**: Commands are logged to the communication table in controllers BEFORE being queued, so failed/discarded commands still appear as "sent".
+
+  **Proposed Fix**:
+  1. Add a `command_sent` signal that fires after successful `_transport.write()`
+  2. Move `log_sent_messages()` calls to respond to this signal
+  3. Or add a "Status" column to the table showing Queued/Sent/Failed
+
+  **Files**: `mc_desktop/ui/controllers.py` (lines 188, 344), `mc_desktop/communication.py`
+
+---
+
 ## Performance Improvements
 
 - [x] **Reduce serial polling frequency**: The `_poll_idle()` method in `communication.py:288` polls status every 0.5s during idle. Consider making this configurable or adaptive based on activity.
