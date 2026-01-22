@@ -74,6 +74,7 @@ MC-Desktop/
 │   ├── __init__.py
 │   ├── __main__.py            # Entry point for python -m
 │   ├── app.py                 # Application bootstrap
+│   ├── commands.py            # Centralized serial command constants
 │   ├── communication.py       # Serial communication layer
 │   ├── node_manager.py        # Node state management
 │   ├── updater.py             # Auto-update functionality
@@ -87,6 +88,7 @@ MC-Desktop/
 │       ├── designer/          # Qt Designer .ui files
 │       └── forms/             # Auto-generated Python UI classes
 ├── tests/                     # Unit tests
+│   └── benchmarks/            # Performance benchmarks
 ├── docs/                      # Documentation
 ├── scripts/                   # Utility scripts
 │   └── generate_ui.py         # UI regeneration script
@@ -164,10 +166,18 @@ uv pip install <package-name>
 
 ```
 tests/
-├── test_app.py              # Application bootstrap tests
-├── test_node_manager.py     # Node state management tests
-├── test_macro_runner.py     # Macro execution tests
-└── test_ui_controllers.py   # Controller unit tests
+├── test_app.py                    # Application bootstrap tests
+├── test_communication_manager.py  # Serial communication tests
+├── test_edge_cases.py             # Edge case and error handling tests
+├── test_macro_runner.py           # Macro execution tests
+├── test_node_manager.py           # Node state management tests
+├── test_node_settings_controller.py # Settings controller tests
+├── test_serial_integration.py     # Serial port integration tests
+├── test_ui_controllers.py         # Controller unit tests
+├── test_ui_pytestqt.py            # Qt widget tests (pytest-qt)
+├── test_updater.py                # Auto-update functionality tests
+└── benchmarks/
+    └── test_performance.py        # Performance benchmarks
 ```
 
 ### Writing Tests

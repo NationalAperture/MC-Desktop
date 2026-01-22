@@ -308,7 +308,6 @@ class MainWindow(QMainWindow):
         self.serial.signals.main_thread.connect(self.manage_callback)
         self.serial.signals.poll.connect(self.update_node_motor_values)
         self.serial.signals.connection_lost.connect(self._on_connection_lost)
-        self.serial.signals.command_status.connect(self._on_command_status)
         self.node_manager = NodeManager()
         self.motor_stats: list[MotorStats] = []
         self.verticalSpacer = QSpacerItem(20, 40, QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Expanding)
@@ -317,7 +316,6 @@ class MainWindow(QMainWindow):
         self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
         self.column_count = self.ui.com_bus_table.columnCount()
         self.com_bus_max_rows = COM_BUS_MAX_ROWS
-        self._command_status_items: dict[str, QTableWidgetItem] = {}
         self._pending_motor_updates: dict[str, str] = {}
         self._motor_update_timer = QTimer(self)
         self._motor_update_timer.setSingleShot(True)
@@ -874,27 +872,23 @@ class MainWindow(QMainWindow):
             await_completion=await_completion,
             context=context,
         )
-        status_item = self.log_sent_messages(params, status="Queued")
+        self.log_sent_messages(params)
         if command_id is None:
-            status_item.setText("Failed")
             return
-        self._track_command_status(command_id, status_item)
 
-    def log_sent_messages(self, message: Sequence[str], status: str = "Sent") -> QTableWidgetItem:
+    def log_sent_messages(self, message: Sequence[str]) -> None:
         #ToDo: Look to see if I can combine this function with the received one.
         #   The only difference is added the PC for "Device".
         self.ui.com_bus_table.insertRow(0)
         cmd = ' '.join(message)
         timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        status_item = QTableWidgetItem(status)
-        items = ("PC", cmd, timestamp, status_item)
+        items = ("PC", cmd, timestamp)
         for col, item in enumerate(items):
             if isinstance(item, QTableWidgetItem):
                 self.ui.com_bus_table.setItem(0, col, item)
             else:
                 self.ui.com_bus_table.setItem(0, col, QTableWidgetItem(item))
         self._trim_com_bus_table()
-        return status_item
 
     def log_received_messages(self, message: str) -> None:
         self.ui.com_bus_table.insertRow(0)
@@ -903,23 +897,11 @@ class MainWindow(QMainWindow):
             f"Node Id: {self.node_manager.current_node_id}",
             message,
             timestamp,
-            "",
         )
         for col, value in enumerate(items):
             item = QTableWidgetItem(str(value))
             self.ui.com_bus_table.setItem(0, col, item)
         self._trim_com_bus_table()
-
-    def _track_command_status(self, command_id: str, status_item: QTableWidgetItem) -> None:
-        self._command_status_items[command_id] = status_item
-
-    def _on_command_status(self, command_id: str, status: str) -> None:
-        item = self._command_status_items.get(command_id)
-        if item is None:
-            return
-        item.setText(status)
-        if status in ("Sent", "Failed"):
-            self._command_status_items.pop(command_id, None)
 
     def _trim_com_bus_table(self) -> None:
         while self.ui.com_bus_table.rowCount() > self.com_bus_max_rows:

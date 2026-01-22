@@ -2,6 +2,23 @@
 
 This document describes the serial command protocol used to communicate with National Aperture, Inc. MC-6 series motion controllers.
 
+## Software Implementation
+
+All command strings are centralized in `mc_desktop/commands.py` as constants:
+
+```python
+from mc_desktop.commands import (
+    CMD_MOVE_ABSOLUTE,    # "mva"
+    CMD_MOVE_RELATIVE,    # "mvr"
+    CMD_JOG,              # "jog"
+    CMD_POSITION,         # "pos"
+    CMD_STATUS,           # "sts"
+    # ... etc.
+)
+```
+
+This ensures consistent command usage throughout the codebase and provides a single source of truth for the protocol implementation.
+
 ## Connection Parameters
 
 | Parameter | Value |

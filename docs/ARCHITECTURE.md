@@ -98,7 +98,7 @@ The central UI component that:
 │ │ PC      │  0 mva 1000           │  2024-01-15 10:30 │   │
 │ │ Node: 0 │  OK                   │  2024-01-15 10:30 │   │
 │ └─────────────────────────────────────────────────────┘   │
-│ StatusBar: [v0.1.9]                                       │
+│ StatusBar: [v1.0.2]                                       │
 └───────────────────────────────────────────────────────────┘
 ```
 
@@ -236,7 +236,7 @@ Dataclass-based state management:
 
 #### CommunicationManager (`communication.py`)
 
-Threaded serial communication:
+Threaded serial communication with automatic recovery and idle polling:
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
@@ -268,6 +268,13 @@ Threaded serial communication:
 │                                  │   MC-6 Hardware     │    │
 │                                  └─────────────────────┘    │
 │                                                              │
+│  Features:                                                  │
+│  ─────────                                                  │
+│  - Idle polling with exponential backoff (0.5s - 2.0s)     │
+│  - Automatic worker thread restart on idle death            │
+│  - Connection failure detection and notification            │
+│  - Command ID tracking for status callbacks                 │
+│                                                              │
 │  Signals (Qt cross-thread communication):                   │
 │  ─────────────────────────────────────────                  │
 │                                                              │
@@ -278,6 +285,10 @@ Threaded serial communication:
 │  ┌────────────────┐    ┌────────────────┐                   │
 │  │ log            │    │ command_       │                   │
 │  │ (responses)    │    │ complete       │                   │
+│  └────────────────┘    └────────────────┘                   │
+│  ┌────────────────┐    ┌────────────────┐                   │
+│  │ connection_    │    │ command_       │                   │
+│  │ lost           │    │ status         │                   │
 │  └────────────────┘    └────────────────┘                   │
 │                                                              │
 └─────────────────────────────────────────────────────────────┘
@@ -433,10 +444,18 @@ User clicks "Run Macro"
 app.py
     └── ui/MainWindow
             ├── communication.py (CommunicationManager)
+            │       └── commands.py (CMD_POSITION, CMD_STATUS)
             ├── node_manager.py (NodeManager)
             ├── updater.py (UpdateChecker)
             └── ui/controllers.py
                     ├── MacroRunner
                     ├── NodeSettingsController
+                    │       └── commands.py (CMD_* constants)
                     └── CommandDispatcher
+                            └── commands.py (CMD_* constants)
+
+commands.py - Centralized command string constants
+    CMD_MOVE, CMD_JOG, CMD_ABORT_MOTION, CMD_SET_HOME,
+    CMD_MOVE_ABSOLUTE, CMD_MOVE_RELATIVE, CMD_POSITION,
+    CMD_STATUS, CMD_GET_*, CMD_SET_*, etc.
 ```

@@ -93,7 +93,7 @@
 - [x] **Remove duplicate wrapper methods in MainWindow**: Methods like `set_kp()`, `set_ki()`, `get_stage_values()` at `main_window.py:540-598` are thin wrappers that just call `self.settings.*`. Remove them and connect signals directly to the controller.
 - [ ] **Consolidate log_sent_messages and log_received_messages**: As noted in the TODO at `main_window.py:785`, these functions are nearly identical. Refactor into a single method with a "source" parameter.
 - [x] **Add type hints throughout**: `main_window.py` and some controller methods lack type annotations. Add comprehensive type hints for better IDE support and maintainability.
-- [ ] **Extract magic strings to constants**: Commands like `"jog"`, `"abm"`, `"mva"` are scattered as string literals. Define them as constants in a dedicated module.
+- [x] **Extract magic strings to constants**: Commands like `"jog"`, `"abm"`, `"mva"` are scattered as string literals. Define them as constants in a dedicated module.
 - [ ] **Improve error handling in serial communication**: `_process_serial_command()` catches exceptions but doesn't notify the UI. Emit an error signal to show users when commands fail.
 - [ ] **Add connection timeout handling**: `_attempt_connection()` can hang if the port is busy. Add explicit timeout and user feedback.
 - [ ] **Refactor callback chain to use signals**: The `callbacks` list pattern in `main_window.py:292,642-691` is fragile. Replace with proper Qt signals/slots or a state machine.

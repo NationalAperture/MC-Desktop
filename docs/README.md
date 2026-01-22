@@ -2,6 +2,8 @@
 
 Welcome to the MC-Desktop (NAI-Mover) documentation.
 
+**Current Version:** 1.0.2
+
 ## Contents
 
 | Document | Description |
