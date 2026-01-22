@@ -10,6 +10,35 @@ except ModuleNotFoundError:  # pragma: no cover
     QFileDialog = None  # type: ignore[assignment]
     QInputDialog = None  # type: ignore[assignment]
 
+from ..commands import (
+    CMD_GET_MOTION_VALUES,
+    CMD_GET_PID_VALUES,
+    CMD_GET_SOFT_LIMITS,
+    CMD_GET_STAGE_VALUES,
+    CMD_LOAD_ABSOLUTE,
+    CMD_LOAD_RELATIVE,
+    CMD_MOVE_ABSOLUTE,
+    CMD_MOVE_RELATIVE,
+    CMD_SET_ACCEL,
+    CMD_SET_CPR,
+    CMD_SET_DECEL,
+    CMD_SET_ERROR_LIMIT,
+    CMD_SET_GH,
+    CMD_SET_HOME,
+    CMD_SET_INTEGRATOR_LIMIT,
+    CMD_SET_KD,
+    CMD_SET_KI,
+    CMD_SET_KP,
+    CMD_SET_LOWER_LIMIT,
+    CMD_SET_SAMPLE_RATE,
+    CMD_SET_STAGE_TYPE,
+    CMD_SET_TOLERANCE,
+    CMD_SET_TPI,
+    CMD_SET_UNIT_TRAVEL,
+    CMD_SET_UPPER_LIMIT,
+    CMD_SET_VEL,
+)
+
 
 @dataclass(frozen=True)
 class PromptConfig:
@@ -22,11 +51,11 @@ class CommandDispatcher:
     """Declarative registry for prompt-based motion commands."""
 
     _PROMPTS: Dict[str, PromptConfig] = {
-        "set_home": PromptConfig("hom", "Set Home Position", "Enter Home Position"),
-        "move_absolute": PromptConfig("mva", "Move Absolute", "Where would you like to move?"),
-        "load_absolute": PromptConfig("lpa", "Load Absolute", "Where would you like to load?"),
-        "move_relative": PromptConfig("mvr", "Move Relative", "Where would you like to move?"),
-        "load_relative": PromptConfig("lpr", "Load Relative", "Where would you like to load?"),
+        "set_home": PromptConfig(CMD_SET_HOME, "Set Home Position", "Enter Home Position"),
+        "move_absolute": PromptConfig(CMD_MOVE_ABSOLUTE, "Move Absolute", "Where would you like to move?"),
+        "load_absolute": PromptConfig(CMD_LOAD_ABSOLUTE, "Load Absolute", "Where would you like to load?"),
+        "move_relative": PromptConfig(CMD_MOVE_RELATIVE, "Move Relative", "Where would you like to move?"),
+        "load_relative": PromptConfig(CMD_LOAD_RELATIVE, "Load Relative", "Where would you like to load?"),
     }
 
     def __init__(
@@ -65,6 +94,18 @@ class LoopFrame:
     start_index: int
     end_index: int
     remaining: int
+
+
+@dataclass(frozen=True)
+class MacroCommand:
+    node_id: str
+    command: str
+    param: Optional[str] = None
+
+    def as_params(self) -> Tuple[str, ...]:
+        if self.param is None:
+            return (self.node_id, self.command)
+        return (self.node_id, self.command, self.param)
 
 
 class MacroRunner:
@@ -144,8 +185,7 @@ class MacroRunner:
             return
         command = macro_steps[0].split()
         params = tuple(command)
-        self.window.log_sent_messages(params)
-        self.window.serial.transmit_queue(*params)
+        self.window.queue_serial_command(params)
         self.repopulate_macro(macro_steps[1:])
 
     def run_macro(self) -> None:
@@ -292,42 +332,26 @@ class MacroRunner:
         return None
 
     def _dispatch_command(self, command: str) -> None:
-        parts = command.split()
-        if not parts:
+        parsed = self._parse_macro_command(command)
+        if parsed is None:
+            self._awaiting_completion = False
+            self.manage_macro()
             return
 
         self._awaiting_completion = True
-        params: Tuple[str, ...]
-        if len(parts) >= 3:
-            node_id, cmd = parts[0], parts[1]
-            param = " ".join(parts[2:]) if len(parts) > 3 else parts[2]
-            params = (node_id, cmd, param)
-            self.window.log_sent_messages(params)
-            self.window.serial.transmit_queue(
-                node_id,
-                cmd,
-                param,
-                await_completion=True,
-                context="macro",
-            )
-            self._steps_executed += 1
-            self.window.set_macro_progress(self._steps_executed, self._steps_total)
-        elif len(parts) == 2:
-            node_id, cmd = parts
-            params = (node_id, cmd)
-            self.window.log_sent_messages(params)
-            self.window.serial.transmit_queue(
-                node_id,
-                cmd,
-                await_completion=True,
-                context="macro",
-            )
-            self._steps_executed += 1
-            self.window.set_macro_progress(self._steps_executed, self._steps_total)
-        else:
+        params = parsed.as_params()
+        self.window.queue_serial_command(params, await_completion=True, context="macro")
+        self._steps_executed += 1
+        self.window.set_macro_progress(self._steps_executed, self._steps_total)
+
+    def _parse_macro_command(self, command: str) -> Optional[MacroCommand]:
+        parts = command.split()
+        if len(parts) < 2:
             self.logger.warning("Macro command '%s' is incomplete and will be skipped.", command)
-            self._awaiting_completion = False
-            self.manage_macro()
+            return None
+        node_id, cmd = parts[0], parts[1]
+        param = " ".join(parts[2:]) if len(parts) > 2 else None
+        return MacroCommand(node_id=node_id, command=cmd, param=param)
 
     def _handle_run_complete(self) -> None:
         ui = self.window.ui
@@ -424,13 +448,13 @@ class NodeSettingsController:
         "pos_tolerance_input": ("pos_tolerance_value", "Position Tolerance"),
     }
 
-    def __init__(self, window, logger: Optional[logging.Logger] = None) -> None:
+    def __init__(self, window: object, logger: Optional[logging.Logger] = None) -> None:
         self.window = window
         self.logger = logger or logging.getLogger(__name__)
         self._validation_labels = dict(self._DEFAULT_VALIDATION_LABELS)
 
     @staticmethod
-    def format_stage_values(stage) -> str:
+    def format_stage_values(stage: object) -> str:
         return ",".join(str(value) for value in (stage.stage, stage.travel, stage.gh, stage.tpi, stage.cpr))
 
     def snapshot_stage(self, node_id: str) -> str:
@@ -447,9 +471,9 @@ class NodeSettingsController:
 
     def refresh_stage_values(self) -> None:
         self.window.callbacks.append(self.update_stage_values)
-        self.window.send_command(("stg",), callback=True)
+        self.window.send_command((CMD_GET_STAGE_VALUES,), callback=True)
 
-    def update_stage_values(self, *args, **__) -> None:
+    def update_stage_values(self, *args: str, **__: object) -> None:
         node_manager = self.window.node_manager
         node_id = node_manager.current_node_id
         node = node_manager.get_stage(node_id)
@@ -479,7 +503,7 @@ class NodeSettingsController:
         ui.cpr_value_label.setText(f"CPR: {cpr}")
         node.update({"CPR": cpr})
 
-    def update_unit_travel(self, *args, **__) -> None:
+    def update_unit_travel(self, *args: str, **__: object) -> None:
         node_manager = self.window.node_manager
         node_id = node_manager.current_node_id
         node = node_manager.get_stage(node_id)
@@ -492,7 +516,7 @@ class NodeSettingsController:
 
     def set_stage_type(self) -> None:
         index = self.window.ui.stage_type_combo.currentIndex() + 1
-        self.window.send_command((f"sst {index}",))
+        self.window.send_command((f"{CMD_SET_STAGE_TYPE} {index}",))
         node_manager = self.window.node_manager
         node_id = node_manager.current_node_id
         node = node_manager.get_stage(node_id)
@@ -500,7 +524,7 @@ class NodeSettingsController:
 
     def set_unit_travel(self) -> None:
         index = self.window.ui.travel_unit_combo.currentIndex() + 1
-        self.window.send_command((f"sut {index}",))
+        self.window.send_command((f"{CMD_SET_UNIT_TRAVEL} {index}",))
         node_manager = self.window.node_manager
         node_id = node_manager.current_node_id
         node = node_manager.get_stage(node_id)
@@ -509,7 +533,7 @@ class NodeSettingsController:
     def set_stage_gh(self) -> None:
         try:
             gh = int(self.window.ui.GH_input.text())
-            self.window.send_command((f"ghr {gh}",))
+            self.window.send_command((f"{CMD_SET_GH} {gh}",))
             self.window.ui.gh_value_label.setText(f"GH: {gh}")
             node = self.window.node_manager.get_stage(self.window.node_manager.current_node_id)
             node.update({"GH": gh})
@@ -520,7 +544,7 @@ class NodeSettingsController:
     def set_stage_tpi(self) -> None:
         try:
             tpi = int(self.window.ui.TPI_input.text())
-            self.window.send_command((f"tpi {tpi}",))
+            self.window.send_command((f"{CMD_SET_TPI} {tpi}",))
             self.window.ui.tpi_value_label.setText(f"TPI: {tpi}")
             node = self.window.node_manager.get_stage(self.window.node_manager.current_node_id)
             node.update({"TPI": tpi})
@@ -531,7 +555,7 @@ class NodeSettingsController:
     def set_stage_cpr(self) -> None:
         try:
             cpr = int(self.window.ui.CPR_input.text())
-            self.window.send_command((f"cpr {cpr}",))
+            self.window.send_command((f"{CMD_SET_CPR} {cpr}",))
             self.window.ui.cpr_value_label.setText(f"CPR: {cpr}")
             node = self.window.node_manager.get_stage(self.window.node_manager.current_node_id)
             node.update({"CPR": cpr})
@@ -541,9 +565,9 @@ class NodeSettingsController:
 
     def refresh_pid_values(self) -> None:
         self.window.callbacks.append(self.update_pid_values)
-        self.window.send_command(("pid",), callback=True)
+        self.window.send_command((CMD_GET_PID_VALUES,), callback=True)
 
-    def update_pid_values(self, *args, **__) -> None:
+    def update_pid_values(self, *args: str, **__: object) -> None:
         node_manager = self.window.node_manager
         node_id = node_manager.current_node_id
         node = node_manager.get_pid(node_id)
@@ -573,7 +597,7 @@ class NodeSettingsController:
             label_attr="kp_value_label",
             label_prefix="KP",
             node_key="KP",
-            command="kp",
+            command=CMD_SET_KP,
             caster=float,
         )
 
@@ -583,7 +607,7 @@ class NodeSettingsController:
             label_attr="ki_value_label",
             label_prefix="KI",
             node_key="KI",
-            command="ki",
+            command=CMD_SET_KI,
             caster=float,
         )
 
@@ -593,7 +617,7 @@ class NodeSettingsController:
             label_attr="kd_value_label",
             label_prefix="KD",
             node_key="KD",
-            command="kd",
+            command=CMD_SET_KD,
             caster=float,
         )
 
@@ -603,7 +627,7 @@ class NodeSettingsController:
             label_attr="int_lmt_value_label",
             label_prefix="Int Lmt",
             node_key="Int",
-            command="ilm",
+            command=CMD_SET_INTEGRATOR_LIMIT,
             caster=int,
         )
 
@@ -613,15 +637,15 @@ class NodeSettingsController:
             label_attr="sample_rate_value_label",
             label_prefix="Sample Rate",
             node_key="Rate",
-            command="spl",
+            command=CMD_SET_SAMPLE_RATE,
             caster=int,
         )
 
     def refresh_motion_values(self) -> None:
         self.window.callbacks.append(self.update_motion_values)
-        self.window.send_command(("prf",), callback=True)
+        self.window.send_command((CMD_GET_MOTION_VALUES,), callback=True)
 
-    def update_motion_values(self, *args, **__) -> None:
+    def update_motion_values(self, *args: str, **__: object) -> None:
         node_manager = self.window.node_manager
         node_id = node_manager.current_node_id
         node = node_manager.get_motion(node_id)
@@ -654,7 +678,7 @@ class NodeSettingsController:
             label_attr="accel_value_label",
             label_prefix="Acceleration",
             node_key="Accel",
-            command="acc",
+            command=CMD_SET_ACCEL,
         )
 
     def set_motion_vel(self) -> None:
@@ -663,7 +687,7 @@ class NodeSettingsController:
             label_attr="vel_value_label",
             label_prefix="Velocity",
             node_key="Velo",
-            command="vel",
+            command=CMD_SET_VEL,
         )
 
     def set_motion_decel(self) -> None:
@@ -672,7 +696,7 @@ class NodeSettingsController:
             label_attr="decel_value_label",
             label_prefix="Deceleration",
             node_key="Decel",
-            command="dec",
+            command=CMD_SET_DECEL,
         )
 
     def set_motion_err(self) -> None:
@@ -681,7 +705,7 @@ class NodeSettingsController:
             label_attr="err_value_label",
             label_prefix="Error Limit",
             node_key="Error",
-            command="erl",
+            command=CMD_SET_ERROR_LIMIT,
         )
 
     def set_jog(self) -> None:
@@ -710,9 +734,9 @@ class NodeSettingsController:
 
     def refresh_advanced_values(self) -> None:
         self.window.callbacks.append(self.update_advanced_values)
-        self.window.send_command(("swl",), callback=True)
+        self.window.send_command((CMD_GET_SOFT_LIMITS,), callback=True)
 
-    def update_advanced_values(self, *args, **__) -> None:
+    def update_advanced_values(self, *args: str, **__: object) -> None:
         node_manager = self.window.node_manager
         node_id = node_manager.current_node_id
         node = node_manager.get_advanced(node_id)
@@ -737,7 +761,7 @@ class NodeSettingsController:
         except ValueError:
             self._warn_invalid_input("lower_limit_input", "an integer", self.window.ui.lower_limit_input.text())
             return
-        self.window.send_command((f"sll {limit}",))
+        self.window.send_command((f"{CMD_SET_LOWER_LIMIT} {limit}",))
         self.window.ui.lower_limit_value.setText(f"Lower Limit: {limit}")
         node = self.window.node_manager.get_advanced(self.window.node_manager.current_node_id)
         node.update({"Lower": limit})
@@ -749,7 +773,7 @@ class NodeSettingsController:
         except ValueError:
             self._warn_invalid_input("upper_limit_input", "an integer", self.window.ui.upper_limit_input.text())
             return
-        self.window.send_command((f"slu {limit}",))
+        self.window.send_command((f"{CMD_SET_UPPER_LIMIT} {limit}",))
         self.window.ui.upper_limit_value.setText(f"Upper Limit: {limit}")
         node = self.window.node_manager.get_advanced(self.window.node_manager.current_node_id)
         node.update({"Upper": limit})
@@ -761,7 +785,7 @@ class NodeSettingsController:
         except ValueError:
             self._warn_invalid_input("pos_tolerance_input", "an integer", self.window.ui.pos_tolerance_input.text())
             return
-        self.window.send_command((f"tol {tolerance}",))
+        self.window.send_command((f"{CMD_SET_TOLERANCE} {tolerance}",))
         self.window.ui.pos_tolerance_value.setText(f"Position Tolerance: {tolerance}")
         node = self.window.node_manager.get_advanced(self.window.node_manager.current_node_id)
         node.update({"Tolerance": tolerance})

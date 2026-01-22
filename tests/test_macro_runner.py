@@ -72,8 +72,9 @@ class FakeWindow:
             variable_amount_value=FakeLineEdit("1"),
         )
 
-    def log_sent_messages(self, message: tuple[str, ...]) -> None:
-        self.sent_log.append(message)
+    def queue_serial_command(self, params: tuple[str, ...], **kwargs: object) -> None:
+        self.sent_log.append(params)
+        self.serial.transmit_queue(*params, **kwargs)
 
     def set_macro_pause_state(self, *_args, **_kwargs) -> None:
         return None

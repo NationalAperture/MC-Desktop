@@ -9,6 +9,57 @@
 
 ---
 
+## Bug Fixes (High Priority)
+
+- [x] **Defer idle polling until a node is added**: After opening the serial port, `_poll_idle()` is called within 0.5s using the default `node_id="0"`, but no node has been added yet. This causes status polling to fail immediately on connection.
+
+  **Root Cause**: `setup_connection()` starts the worker thread which begins the `transmit()` loop. After the first queue timeout (0.5s), `_poll_idle()` calls `check_status()` with `node_id="0"` - a node that doesn't exist on the device.
+
+  **Proposed Fix**:
+  1. Add `_polling_enabled: bool = False` flag to `CommunicationManager.__init__()`
+  2. In `_poll_idle()` and `poll()`, return early if `not self._polling_enabled`
+  3. Add `enable_polling()` method that sets `_polling_enabled = True`
+  4. Call `serial.enable_polling()` from `MainWindow.add_node()` when the first node is added
+
+  **Alternative**: Check `self.parent.node_manager.has_nodes()` in `_poll_idle()` before polling, but this adds coupling between CommunicationManager and NodeManager.
+
+  **Files**: `mc_desktop/communication.py` (lines 137, 380-398), `mc_desktop/ui/main_window.py` (line 763)
+
+- [ ] **Lazy restart worker thread on demand**: The worker thread dies after extended inactivity (QThreadPool expiry). Allow this to happen silently and restart the thread when a new command is queued.
+
+  **Symptoms**: Commands appear in communication table but never transmit after long idle period.
+
+  **Implementation Steps**:
+  1. Add `_worker_running: bool = False` flag to `CommunicationManager.__init__()`
+  2. Connect `worker.signals.finished` to `_on_worker_finished()` in `setup_thread()`
+  3. In `_on_worker_finished()`:
+     - Set `_worker_running = False`
+     - Log at DEBUG level: "Worker thread exited (idle timeout)"
+     - Do NOT emit error signals (this is expected behavior)
+  4. In `transmit_queue()`, before adding to queue:
+     - Check `if not self._worker_running and self.connection:`
+     - If worker is dead but connection exists, call `_restart_worker()`
+  5. Add `_restart_worker()` method:
+     - Create new Worker with `transmit` function
+     - Set `_worker_running = True`
+     - Start worker via `threadpool.start()`
+     - Log: "Worker thread restarted"
+  6. Update `setup_thread()` to set `_worker_running = True`
+  7. Update `close()` to set `_worker_running = False`
+
+  **Files**: `mc_desktop/communication.py` (lines 126-147, 195-206, 218-248)
+
+- [ ] **Log commands after transmission, not before**: Commands are logged to the communication table in controllers BEFORE being queued, so failed/discarded commands still appear as "sent".
+
+  **Proposed Fix**:
+  1. Add a `command_sent` signal that fires after successful `_transport.write()`
+  2. Move `log_sent_messages()` calls to respond to this signal
+  3. Or add a "Status" column to the table showing Queued/Sent/Failed
+
+  **Files**: `mc_desktop/ui/controllers.py` (lines 188, 344), `mc_desktop/communication.py`
+
+---
+
 ## Performance Improvements
 
 - [x] **Reduce serial polling frequency**: The `_poll_idle()` method in `communication.py:288` polls status every 0.5s during idle. Consider making this configurable or adaptive based on activity.
@@ -39,16 +90,16 @@
 
 ## Code Implementation Improvements
 
-- [ ] **Remove duplicate wrapper methods in MainWindow**: Methods like `set_kp()`, `set_ki()`, `get_stage_values()` at `main_window.py:540-598` are thin wrappers that just call `self.settings.*`. Remove them and connect signals directly to the controller.
+- [x] **Remove duplicate wrapper methods in MainWindow**: Methods like `set_kp()`, `set_ki()`, `get_stage_values()` at `main_window.py:540-598` are thin wrappers that just call `self.settings.*`. Remove them and connect signals directly to the controller.
 - [ ] **Consolidate log_sent_messages and log_received_messages**: As noted in the TODO at `main_window.py:785`, these functions are nearly identical. Refactor into a single method with a "source" parameter.
-- [ ] **Add type hints throughout**: `main_window.py` and some controller methods lack type annotations. Add comprehensive type hints for better IDE support and maintainability.
+- [x] **Add type hints throughout**: `main_window.py` and some controller methods lack type annotations. Add comprehensive type hints for better IDE support and maintainability.
 - [ ] **Extract magic strings to constants**: Commands like `"jog"`, `"abm"`, `"mva"` are scattered as string literals. Define them as constants in a dedicated module.
 - [ ] **Improve error handling in serial communication**: `_process_serial_command()` catches exceptions but doesn't notify the UI. Emit an error signal to show users when commands fail.
 - [ ] **Add connection timeout handling**: `_attempt_connection()` can hang if the port is busy. Add explicit timeout and user feedback.
 - [ ] **Refactor callback chain to use signals**: The `callbacks` list pattern in `main_window.py:292,642-691` is fragile. Replace with proper Qt signals/slots or a state machine.
-- [ ] **Add proper shutdown handling**: `closeEvent()` calls `serial.close()` but doesn't wait for the worker thread to finish. Use proper thread synchronization.
+- [x] **Add proper shutdown handling**: `closeEvent()` calls `serial.close()` but doesn't wait for the worker thread to finish. Use proper thread synchronization.
 - [ ] **Validate node_id before operations**: Several methods assume `node_id` is valid. Add guards to prevent crashes when `current_node_id` is None.
-- [ ] **Use dataclasses or Pydantic for command parsing**: Macro command parsing in `_dispatch_command()` at `controllers.py:255` uses manual string splitting. Consider structured parsing.
+- [x] **Use dataclasses or Pydantic for command parsing**: Macro command parsing in `_dispatch_command()` at `controllers.py:255` uses manual string splitting. Consider structured parsing.
 - [ ] **Add retry logic for failed commands**: When serial communication fails, consider automatic retry with exponential backoff.
 - [ ] **Improve logging granularity**: Add DEBUG-level logs for serial transactions and WARNING for recoverable errors. Current logging is sparse in some areas.
 - [ ] **Add configuration file support**: Allow users to save/load application preferences (baud rate, polling interval, etc.) to a config file.

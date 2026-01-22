@@ -261,8 +261,8 @@ class Ui_MainWindow(object):
         self.gridLayout_3 = QGridLayout(self.groupBox_4)
         self.gridLayout_3.setObjectName(u"gridLayout_3")
         self.com_bus_table = QTableWidget(self.groupBox_4)
-        if (self.com_bus_table.columnCount() < 3):
-            self.com_bus_table.setColumnCount(3)
+        if (self.com_bus_table.columnCount() < 4):
+            self.com_bus_table.setColumnCount(4)
         font3 = QFont()
         font3.setPointSize(13)
         __qtablewidgetitem = QTableWidgetItem()
@@ -273,6 +273,8 @@ class Ui_MainWindow(object):
         self.com_bus_table.setHorizontalHeaderItem(1, __qtablewidgetitem1)
         __qtablewidgetitem2 = QTableWidgetItem()
         self.com_bus_table.setHorizontalHeaderItem(2, __qtablewidgetitem2)
+        __qtablewidgetitem3 = QTableWidgetItem()
+        self.com_bus_table.setHorizontalHeaderItem(3, __qtablewidgetitem3)
         self.com_bus_table.setObjectName(u"com_bus_table")
         self.com_bus_table.setEnabled(True)
         self.com_bus_table.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
@@ -1023,6 +1025,8 @@ class Ui_MainWindow(object):
         ___qtablewidgetitem1.setText(QCoreApplication.translate("MainWindow", u"Message", None));
         ___qtablewidgetitem2 = self.com_bus_table.horizontalHeaderItem(2)
         ___qtablewidgetitem2.setText(QCoreApplication.translate("MainWindow", u"Time Stamp", None));
+        ___qtablewidgetitem3 = self.com_bus_table.horizontalHeaderItem(3)
+        ___qtablewidgetitem3.setText(QCoreApplication.translate("MainWindow", u"Status", None));
         self.groupBox_10.setTitle(QCoreApplication.translate("MainWindow", u"Configuration", None))
         self.VN_label.setText(QCoreApplication.translate("MainWindow", u"N/A", None))
         self.label_11.setText(QCoreApplication.translate("MainWindow", u"Serial Number:", None))
@@ -1113,4 +1117,3 @@ class Ui_MainWindow(object):
         self.refresh_motion_btn.setText(QCoreApplication.translate("MainWindow", u"Refresh Motion Information", None))
         self.err_input.setPlaceholderText(QCoreApplication.translate("MainWindow", u"Enter Error Limit", None))
     # retranslateUi
-

@@ -514,11 +514,16 @@
                    </font>
                   </property>
                  </column>
-                 <column>
-                  <property name="text">
-                   <string>Time Stamp</string>
-                  </property>
-                 </column>
+                <column>
+                 <property name="text">
+                  <string>Time Stamp</string>
+                 </property>
+                </column>
+                <column>
+                 <property name="text">
+                  <string>Status</string>
+                 </property>
+                </column>
                 </widget>
                </item>
               </layout>

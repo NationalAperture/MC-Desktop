@@ -40,7 +40,7 @@ def test_node_manager_empty_list_defaults():
 
 def test_check_status_handles_empty_response():
     manager = CommunicationManager(parent=object(), logger=logging.getLogger("test_comm"))
-    manager.connection = object()
+    manager.connection = SimpleNamespace(is_open=True)
     manager._transport = _FakeTransport(response="")
 
     assert manager.check_status() is None
