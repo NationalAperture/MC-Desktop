@@ -25,7 +25,7 @@
 
   **Files**: `mc_desktop/communication.py` (lines 137, 380-398), `mc_desktop/ui/main_window.py` (line 763)
 
-- [ ] **Lazy restart worker thread on demand**: The worker thread dies after extended inactivity (QThreadPool expiry). Allow this to happen silently and restart the thread when a new command is queued.
+- [x] **Lazy restart worker thread on demand**: The worker thread dies after extended inactivity (QThreadPool expiry). Allow this to happen silently and restart the thread when a new command is queued.
 
   **Symptoms**: Commands appear in communication table but never transmit after long idle period.
 
