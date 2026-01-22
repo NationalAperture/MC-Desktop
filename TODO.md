@@ -9,6 +9,57 @@
 
 ---
 
+## Bug Fixes (High Priority)
+
+- [x] **Defer idle polling until a node is added**: After opening the serial port, `_poll_idle()` is called within 0.5s using the default `node_id="0"`, but no node has been added yet. This causes status polling to fail immediately on connection.
+
+  **Root Cause**: `setup_connection()` starts the worker thread which begins the `transmit()` loop. After the first queue timeout (0.5s), `_poll_idle()` calls `check_status()` with `node_id="0"` - a node that doesn't exist on the device.
+
+  **Proposed Fix**:
+  1. Add `_polling_enabled: bool = False` flag to `CommunicationManager.__init__()`
+  2. In `_poll_idle()` and `poll()`, return early if `not self._polling_enabled`
+  3. Add `enable_polling()` method that sets `_polling_enabled = True`
+  4. Call `serial.enable_polling()` from `MainWindow.add_node()` when the first node is added
+
+  **Alternative**: Check `self.parent.node_manager.has_nodes()` in `_poll_idle()` before polling, but this adds coupling between CommunicationManager and NodeManager.
+
+  **Files**: `mc_desktop/communication.py` (lines 137, 380-398), `mc_desktop/ui/main_window.py` (line 763)
+
+- [ ] **Lazy restart worker thread on demand**: The worker thread dies after extended inactivity (QThreadPool expiry). Allow this to happen silently and restart the thread when a new command is queued.
+
+  **Symptoms**: Commands appear in communication table but never transmit after long idle period.
+
+  **Implementation Steps**:
+  1. Add `_worker_running: bool = False` flag to `CommunicationManager.__init__()`
+  2. Connect `worker.signals.finished` to `_on_worker_finished()` in `setup_thread()`
+  3. In `_on_worker_finished()`:
+     - Set `_worker_running = False`
+     - Log at DEBUG level: "Worker thread exited (idle timeout)"
+     - Do NOT emit error signals (this is expected behavior)
+  4. In `transmit_queue()`, before adding to queue:
+     - Check `if not self._worker_running and self.connection:`
+     - If worker is dead but connection exists, call `_restart_worker()`
+  5. Add `_restart_worker()` method:
+     - Create new Worker with `transmit` function
+     - Set `_worker_running = True`
+     - Start worker via `threadpool.start()`
+     - Log: "Worker thread restarted"
+  6. Update `setup_thread()` to set `_worker_running = True`
+  7. Update `close()` to set `_worker_running = False`
+
+  **Files**: `mc_desktop/communication.py` (lines 126-147, 195-206, 218-248)
+
+- [ ] **Log commands after transmission, not before**: Commands are logged to the communication table in controllers BEFORE being queued, so failed/discarded commands still appear as "sent".
+
+  **Proposed Fix**:
+  1. Add a `command_sent` signal that fires after successful `_transport.write()`
+  2. Move `log_sent_messages()` calls to respond to this signal
+  3. Or add a "Status" column to the table showing Queued/Sent/Failed
+
+  **Files**: `mc_desktop/ui/controllers.py` (lines 188, 344), `mc_desktop/communication.py`
+
+---
+
 ## Performance Improvements
 
 - [x] **Reduce serial polling frequency**: The `_poll_idle()` method in `communication.py:288` polls status every 0.5s during idle. Consider making this configurable or adaptive based on activity.

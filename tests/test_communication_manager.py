@@ -6,13 +6,15 @@ Example: consecutive idle polls shift from 0.5s to 1.0s then 2.0s.
 """
 
 import logging
+from types import SimpleNamespace
 
 from mc_desktop.communication import CommunicationManager
 
 
 def test_idle_poll_interval_backoff():
     manager = CommunicationManager(parent=object(), logger=logging.getLogger("test_comm"))
-    manager.connection = object()
+    manager.connection = SimpleNamespace(is_open=True)
+    manager.enable_polling()
 
     def fake_check_status():
         manager.in_motion = False
@@ -32,7 +34,8 @@ def test_idle_poll_interval_backoff():
 
 def test_idle_poll_interval_resets_on_motion():
     manager = CommunicationManager(parent=object(), logger=logging.getLogger("test_comm"))
-    manager.connection = object()
+    manager.connection = SimpleNamespace(is_open=True)
+    manager.enable_polling()
 
     def fake_check_status():
         manager.in_motion = True
@@ -46,3 +49,17 @@ def test_idle_poll_interval_resets_on_motion():
     manager._poll_idle()
     assert manager._idle_poll_interval == manager.IDLE_POLL_MIN_SECONDS
     assert manager._idle_poll_idle_streak == 0
+
+
+def test_worker_finished_marks_worker_stopped():
+    manager = CommunicationManager(parent=object(), logger=logging.getLogger("test_comm"))
+    manager.connection = SimpleNamespace(is_open=True)
+    manager._transport = SimpleNamespace(close=lambda: None)
+    manager._alive = True
+    manager._worker = object()
+    manager._worker_running = True
+
+    manager._on_worker_finished()
+
+    assert manager._worker is None
+    assert manager._worker_running is False

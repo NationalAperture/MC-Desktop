@@ -185,8 +185,7 @@ class MacroRunner:
             return
         command = macro_steps[0].split()
         params = tuple(command)
-        self.window.log_sent_messages(params)
-        self.window.serial.transmit_queue(*params)
+        self.window.queue_serial_command(params)
         self.repopulate_macro(macro_steps[1:])
 
     def run_macro(self) -> None:
@@ -341,14 +340,7 @@ class MacroRunner:
 
         self._awaiting_completion = True
         params = parsed.as_params()
-        self.window.log_sent_messages(params)
-        self.window.serial.transmit_queue(
-            parsed.node_id,
-            parsed.command,
-            parsed.param,
-            await_completion=True,
-            context="macro",
-        )
+        self.window.queue_serial_command(params, await_completion=True, context="macro")
         self._steps_executed += 1
         self.window.set_macro_progress(self._steps_executed, self._steps_total)
 
