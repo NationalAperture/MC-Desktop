@@ -23,6 +23,6 @@ Welcome to the MC-Desktop (NAI-Mover) documentation.
 ## Additional Resources
 
 - [Main README](../README.md) - Project overview and quick start
-- [CHANGELOG.md](../CHANGELOG.md) - Version history and recent changes
+- [CHANGELOG.md](CHANGELOG.md) - Version history and recent changes
 - [CONTRIBUTING.md](../CONTRIBUTING.md) - How to contribute and maintain the changelog
 - [TODO.md](../TODO.md) - Planned improvements and known issues
