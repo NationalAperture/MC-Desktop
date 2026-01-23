@@ -553,7 +553,12 @@ class MainWindow(QMainWindow):
         super().keyReleaseEvent(event)
 
     def _jog_key(self, high_speed: bool, reverse: bool) -> None:
-        node = self.node_manager.get_motion(self.comboBox.currentText())
+        node_id = self._validate_node_id(self.comboBox.currentText(), context="jog key")
+        if not node_id:
+            return
+        node = self.node_manager.get_motion(node_id)
+        if not node:
+            return
         speed = node["HSValue"] if high_speed else node["Jog"]
         command_speed = f"-{speed}" if reverse else speed
         self.send_command((CMD_JOG, command_speed))
@@ -568,7 +573,12 @@ class MainWindow(QMainWindow):
         self.send_command((CMD_SET_LIMIT_BEHAVIOR, index), node_id=node_id)
 
     def toggle_jog(self, checked: bool, node_id: Optional[str]) -> None:
+        node_id = self._validate_node_id(node_id, context="toggle jog")
+        if not node_id:
+            return
         node = self.node_manager.get_motion(node_id)
+        if not node:
+            return
         if checked:
             node["Jog"] = node["HSValue"]
         else:
@@ -595,6 +605,9 @@ class MainWindow(QMainWindow):
 
     """ SETTINGS IMPLEMENTATION """
     def selected_node_change(self, node_id: str, get_values: bool = False) -> None:
+        node_id = self._validate_node_id(node_id, context="select node")
+        if not node_id:
+            return
         if get_values:
             sn, vn = self.node_manager.get_config_values(node_id)
             self.set_serial_number(sn)
@@ -611,14 +624,22 @@ class MainWindow(QMainWindow):
 
     def set_serial_number(self, serial_number: str) -> None:
         self.ui.SN_label.setText(serial_number)
-        node_id = self.node_manager.current_node_id
+        node_id = self._validate_node_id(self.node_manager.current_node_id, context="set serial number")
+        if not node_id:
+            return
         node = self.node_manager.get_config(node_id)
+        if not node:
+            return
         node.update({"SN": serial_number})
 
     def set_version_number(self, version_number: str) -> None:
         self.ui.VN_label.setText(version_number)
-        node_id = self.node_manager.current_node_id
+        node_id = self._validate_node_id(self.node_manager.current_node_id, context="set version number")
+        if not node_id:
+            return
         node = self.node_manager.get_config(node_id)
+        if not node:
+            return
         node.update({"VN": version_number})
 
     def save_configuration(self) -> None:
@@ -646,8 +667,12 @@ class MainWindow(QMainWindow):
     def set_baud_rate(self) -> None:
         baud_rate = int(self.ui.baud_rates.currentIndex() + 1)
         self.send_command((f"{CMD_SET_BAUD_RATE} {baud_rate}",))
-        node_id = self.node_manager.current_node_id
+        node_id = self._validate_node_id(self.node_manager.current_node_id, context="set baud rate")
+        if not node_id:
+            return
         node = self.node_manager.get_advanced(node_id)
+        if not node:
+            return
         node.update({"Baud_Rate": baud_rate})
 
 
@@ -692,6 +717,9 @@ class MainWindow(QMainWindow):
             callback(*args, **kwargs)
 
     def get_node_values(self, node_id: Optional[str] = None) -> None:
+        node_id = self._validate_node_id(node_id, context="get node values")
+        if not node_id:
+            return
         self.node_manager.current_node_id = node_id
         self.get_serial_number()
 
@@ -831,6 +859,9 @@ class MainWindow(QMainWindow):
 
     def selected_new_node(self) -> None:
         node_id = self.comboBox.currentText()
+        node_id = self._validate_node_id(node_id, context="select new node")
+        if not node_id:
+            return
         self.serial.node_id = node_id
         self.node_manager.current_node_id = node_id
         self.selected_node_change(node_id, True)
@@ -848,6 +879,9 @@ class MainWindow(QMainWindow):
     ) -> None:
         if node_id is None:
             node_id = self.node_manager.current_node_id
+        node_id = self._validate_node_id(node_id, context="send command")
+        if not node_id:
+            return
         msg = (node_id,) + command
         self.queue_serial_command(msg, callback=callback)
 
@@ -877,8 +911,18 @@ class MainWindow(QMainWindow):
             return
 
     def _on_serial_log(self, message: str) -> None:
-        source = f"Node Id: {self.node_manager.current_node_id}"
+        current_node = self.node_manager.current_node_id
+        source = f"Node Id: {current_node}" if current_node else "Node Id: N/A"
         self._log_com_bus_message(source, message)
+
+    def _validate_node_id(self, node_id: Optional[str], *, context: str) -> Optional[str]:
+        if not node_id:
+            logger.warning("No node selected for %s; skipping.", context)
+            return None
+        if node_id not in self.node_manager.list_nodes():
+            logger.warning("Unknown node %s for %s; skipping.", node_id, context)
+            return None
+        return node_id
 
     def _log_com_bus_message(self, source: str, message: str) -> None:
         self.ui.com_bus_table.insertRow(0)
