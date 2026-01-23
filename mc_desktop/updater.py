@@ -6,9 +6,9 @@ import sys
 import stat
 import tempfile
 import subprocess
-from pathlib import Path
+from pathlib import Path, PureWindowsPath
 from packaging import version
-from PySide6.QtCore import QObject, Signal
+from PySide6.QtCore import QObject, Signal, QTimer
 from PySide6.QtNetwork import QNetworkAccessManager, QNetworkRequest, QNetworkReply
 from PySide6.QtCore import QUrl
 import json
@@ -20,6 +20,8 @@ logger = logging.getLogger(__name__)
 # Update this to your repository
 GITHUB_REPO = "NationalAperture/MC-Desktop"
 RELEASES_API_URL = f"https://api.github.com/repos/{GITHUB_REPO}/releases/latest"
+
+RESTART_QUIT_DELAY_MS = 100
 
 
 def get_executable_path() -> Path:
@@ -242,7 +244,7 @@ class UpdateDownloader(QObject):
             self.install_complete.emit()
 
             # Restart the application
-            self._restart_app(current_exe)
+            self._restart_app_detached(current_exe)
 
         except Exception as e:
             # Restore backup on failure
@@ -254,27 +256,20 @@ class UpdateDownloader(QObject):
         """Install on Windows using a batch script that runs after app exits."""
         batch_path = Path(tempfile.gettempdir()) / "nai_mover_update.bat"
 
-        batch_content = f'''@echo off
-echo Waiting for application to close...
-timeout /t 2 /nobreak >nul
-echo Installing update...
-move /y "{self.download_path}" "{current_exe}"
-if errorlevel 1 (
-    echo Update failed!
-    pause
-    exit /b 1
-)
-echo Update complete, restarting...
-start "" "{current_exe}"
-del "%~f0"
-'''
+        batch_content = self._build_windows_update_script(current_exe)
         with open(batch_path, 'w') as f:
             f.write(batch_content)
 
-        # Start the batch script and exit
+        # Start the batch script hidden and detached
+        startupinfo = subprocess.STARTUPINFO()
+        startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+        startupinfo.wShowWindow = subprocess.SW_HIDE
+
         subprocess.Popen(
             ['cmd', '/c', str(batch_path)],
-            creationflags=subprocess.CREATE_NEW_CONSOLE
+            creationflags=subprocess.DETACHED_PROCESS | subprocess.CREATE_NO_WINDOW,
+            startupinfo=startupinfo,
+            close_fds=True,
         )
 
         logger.info("Update batch script started, exiting application")
@@ -282,15 +277,42 @@ del "%~f0"
 
         # Exit the application so the batch script can replace it
         from PySide6.QtWidgets import QApplication
-        QApplication.quit()
+        QTimer.singleShot(RESTART_QUIT_DELAY_MS, QApplication.quit)
 
-    def _restart_app(self, exe_path: Path):
-        """Restart the application after update."""
+    def _build_windows_update_script(self, current_exe: Path) -> str:
+        """Build the Windows update batch script with a safe wait loop."""
+        if not self.download_path:
+            raise RuntimeError("Download path not set for Windows update")
+
+        exe_name = PureWindowsPath(str(current_exe)).name
+        return f'''@echo off
+:wait_loop
+tasklist /fi "imagename eq {exe_name}" 2>nul | find /i "{exe_name}" >nul
+if not errorlevel 1 (
+    timeout /t 1 /nobreak >nul
+    goto wait_loop
+)
+timeout /t 1 /nobreak >nul
+move /y "{self.download_path}" "{current_exe}"
+if errorlevel 1 exit /b 1
+start "" "{current_exe}"
+del "%~f0"
+'''
+
+    def _restart_app_detached(self, exe_path: Path):
+        """Restart the application fully detached from the parent."""
         logger.info(f"Restarting application: {exe_path}")
 
-        # Start new instance
-        subprocess.Popen([str(exe_path)])
+        # Start new instance detached from parent process group
+        subprocess.Popen(
+            [str(exe_path)],
+            start_new_session=True,
+            stdin=subprocess.DEVNULL,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            close_fds=True,
+        )
 
-        # Exit current instance
+        # Exit current instance after a short delay
         from PySide6.QtWidgets import QApplication
-        QApplication.quit()
+        QTimer.singleShot(RESTART_QUIT_DELAY_MS, QApplication.quit)
