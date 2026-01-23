@@ -1,5 +1,6 @@
 import json
 import logging
+from pathlib import Path
 
 import pytest
 
@@ -101,3 +102,15 @@ def test_update_downloader_emits_failure(tmp_path, qtbot):
     downloader._on_finished()
 
     assert errors
+
+
+def test_windows_update_script_contains_wait_and_restart(tmp_path, qtbot):
+    downloader = UpdateDownloader()
+    downloader.download_path = tmp_path / "NAI-Mover-update.exe"
+    current_exe = Path(r"C:\Program Files\NAI-Mover\NAI-Mover.exe")
+
+    script = downloader._build_windows_update_script(current_exe)
+
+    assert "tasklist /fi \"imagename eq NAI-Mover.exe\"" in script
+    assert f"move /y \"{downloader.download_path}\" \"{current_exe}\"" in script
+    assert f"start \"\" \"{current_exe}\"" in script
