@@ -25,6 +25,7 @@ class MySignal(QObject):
     poll = Signal(str, str)
     command_complete = Signal(object, object)
     connection_lost = Signal(str)
+    device_not_responding = Signal(str)
     command_status = Signal(str, str)
 
 class Worker(QRunnable):
@@ -146,6 +147,7 @@ class CommunicationManager:
         self._idle_poll_idle_streak = 0
         self._consecutive_failures = 0
         self._connection_failure_notified = False
+        self._device_not_responding_notified = False
         self._polling_enabled = False
         self._worker_running = False
         self._command_counter = 0
@@ -203,12 +205,10 @@ class CommunicationManager:
             self.threadpool = QThreadPool.globalInstance()
         worker_0 = Worker(self.transmit)
         worker_0.signals.finished.connect(self._on_worker_finished)
-        # worker_1 = Worker(self.send_cmd)
         self._alive = True
         self._worker = worker_0
         self._worker_running = True
         self.threadpool.start(worker_0)
-        # self.threadpool.start(worker_1)
 
     def close(self, *, wait: bool = True, timeout_ms: int = 2000) -> None:
         self._alive = False
@@ -332,6 +332,13 @@ class CommunicationManager:
 
     def _reset_failures(self) -> None:
         self._consecutive_failures = 0
+        self._device_not_responding_notified = False
+
+    def _record_no_response(self, reason: str) -> None:
+        """Record a no-response failure. After MAX_CONSECUTIVE_FAILURES, notifies UI but keeps connection open."""
+        self._consecutive_failures += 1
+        if self._consecutive_failures >= self.MAX_CONSECUTIVE_FAILURES:
+            self._handle_device_not_responding(reason)
 
     def _drain_command_queue(self) -> int:
         dropped_count = 0
@@ -364,6 +371,20 @@ class CommunicationManager:
         if not self._connection_failure_notified:
             self.signals.connection_lost.emit(reason)
             self._connection_failure_notified = True
+
+    def _handle_device_not_responding(self, reason: str) -> None:
+        """Notify UI that device is not responding, but keep the connection open."""
+        self.logger.error("Device not responding: %s", reason)
+        self._consecutive_failures = 0
+        self._polling_enabled = False
+
+        dropped_count = self._drain_command_queue()
+        if dropped_count > 0:
+            self.logger.warning("Dropped %d pending commands due to device not responding", dropped_count)
+
+        if not self._device_not_responding_notified:
+            self.signals.device_not_responding.emit(reason)
+            self._device_not_responding_notified = True
 
     def _emit_command_status(self, command_id: Optional[str], status: str) -> None:
         if command_id:
@@ -403,7 +424,7 @@ class CommunicationManager:
         if response:
             self._reset_failures()
         else:
-            self._record_failure("No response from device")
+            self._record_no_response("No response from device")
 
         if response:
             self.signals.log.emit(response)
@@ -441,7 +462,7 @@ class CommunicationManager:
         try:
             status = self.check_status()
             if not status:
-                self._record_failure("Device not responding to status request")
+                self._record_no_response("Device not responding to status request")
                 return
             self._reset_failures()
             if self.in_motion:
@@ -482,7 +503,7 @@ class CommunicationManager:
             return None
 
         if not status:
-            self._record_failure("Device not responding to status request")
+            self._record_no_response("Device not responding to status request")
             return None
         self._reset_failures()
 

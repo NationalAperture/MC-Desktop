@@ -146,7 +146,7 @@ class Connection(QWidget):
         if self.parent.add_node(node_id):
             self.ui.remove_node_combo.addItem(node_id)
             self.parent.comboBox.setCurrentIndex(self.parent.comboBox.count() - 1)
-            self.parent.get_node_values(node_id)
+            # self.parent.get_node_values(node_id)
 
     def remove_node(self) -> None:
         node_index = self.ui.remove_node_combo.currentIndex()
@@ -308,6 +308,7 @@ class MainWindow(QMainWindow):
         self.serial.signals.main_thread.connect(self.manage_callback)
         self.serial.signals.poll.connect(self.update_node_motor_values)
         self.serial.signals.connection_lost.connect(self._on_connection_lost)
+        self.serial.signals.device_not_responding.connect(self._on_device_not_responding)
         self.node_manager = NodeManager()
         self.motor_stats: list[MotorStats] = []
         self.verticalSpacer = QSpacerItem(20, 40, QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Expanding)
@@ -523,6 +524,13 @@ class MainWindow(QMainWindow):
             f"Serial communication failed: {reason}\n\nPlease reconnect.",
         )
         self.set_connection_status(False)
+
+    def _on_device_not_responding(self, reason: str) -> None:
+        QMessageBox.warning(
+            self,
+            "Device Not Responding",
+            f"No response from device: {reason}\n\nThe connection is still open, but pending commands have been cleared.",
+        )
 
     def keyPressEvent(self, event: QKeyEvent) -> None:
         if event.isAutoRepeat():

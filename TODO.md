@@ -60,6 +60,93 @@
 
 ---
 
+## Bug Fixes: Updater
+
+- [ ] **Windows updater closes and reopens but does not apply update**: The batch script update mechanism fails to replace the executable, causing the old version to restart.
+
+  **Root Cause Analysis**:
+  The Windows update uses a batch script (`_build_windows_update_script`) that:
+  1. Waits for the process to exit via `tasklist`
+  2. Waits only 1 second after process disappears
+  3. Attempts `move /y` to replace the executable
+  4. If move succeeds, starts the new exe; if it fails, exits silently
+
+  **Likely Failure Points**:
+  1. **Insufficient wait time**: Windows often holds file locks for several seconds after a process exits. The 1-second wait is not enough.
+  2. **Silent failure**: When `move` fails, the script exits without any user feedback or logging.
+  3. **No retry mechanism**: If the move fails due to a temporary lock, there's no retry logic.
+  4. **Permission issues**: If installed in Program Files, `move` requires elevation (UAC).
+  5. **Antivirus interference**: AV software may hold locks on the downloaded file or block the move operation.
+  6. **No verification**: The script doesn't verify the move actually succeeded before restarting.
+
+  **Implementation Steps**:
+  1. **Increase wait time and add retry loop** in `_build_windows_update_script()`:
+     - After detecting process exit, wait 2-3 seconds instead of 1
+     - Add a retry loop (3-5 attempts) with increasing delays for the `move` command
+     - Example: try move, if fails wait 2 seconds, retry up to 5 times
+
+  2. **Add move verification**:
+     - After `move`, check if the file exists at the destination
+     - Compare file sizes or use `fc` to verify the new file is in place
+
+  3. **Add logging to batch script**:
+     - Write status messages to a log file in temp directory (e.g., `%TEMP%\nai_mover_update.log`)
+     - Log each step: waiting for exit, attempting move, move result, starting app
+     - On failure, log the error before exiting
+
+  4. **Add user feedback on failure**:
+     - If all move retries fail, show a message box using `msg` command or create an error file
+     - Consider emitting a signal from Python to show dialog if update fails
+
+  5. **Handle UAC/permissions**:
+     - Detect if running from protected directory (Program Files)
+     - If so, either request elevation or warn user before attempting update
+     - Alternative: download to user-writable location and update from there
+
+  6. **Updated batch script template**:
+     ```batch
+     @echo off
+     set LOGFILE=%TEMP%\nai_mover_update.log
+     echo [%DATE% %TIME%] Update script started >> "%LOGFILE%"
+
+     :wait_loop
+     tasklist /fi "imagename eq {exe_name}" 2>nul | find /i "{exe_name}" >nul
+     if not errorlevel 1 (
+         timeout /t 1 /nobreak >nul
+         goto wait_loop
+     )
+     echo [%DATE% %TIME%] Process exited >> "%LOGFILE%"
+     timeout /t 3 /nobreak >nul
+
+     set RETRIES=0
+     :move_retry
+     echo [%DATE% %TIME%] Move attempt %RETRIES% >> "%LOGFILE%"
+     move /y "{download_path}" "{current_exe}" >> "%LOGFILE%" 2>&1
+     if errorlevel 1 (
+         set /a RETRIES+=1
+         if %RETRIES% lss 5 (
+             echo [%DATE% %TIME%] Move failed, retrying... >> "%LOGFILE%"
+             timeout /t 2 /nobreak >nul
+             goto move_retry
+         )
+         echo [%DATE% %TIME%] Move failed after 5 attempts >> "%LOGFILE%"
+         exit /b 1
+     )
+
+     echo [%DATE% %TIME%] Move succeeded, starting app >> "%LOGFILE%"
+     start "" "{current_exe}"
+     del "%~f0"
+     ```
+
+  7. **Add Python-side verification** (optional enhancement):
+     - On app startup, check for update log file
+     - If log shows failure, notify user that update failed
+     - Clean up log file after reading
+
+  **Files**: `mc_desktop/updater.py` (lines 254-299, `_install_windows` and `_build_windows_update_script`)
+
+---
+
 ## Performance Improvements
 
 - [x] **Reduce serial polling frequency**: The `_poll_idle()` method in `communication.py:288` polls status every 0.5s during idle. Consider making this configurable or adaptive based on activity.
