@@ -109,8 +109,11 @@ def test_windows_update_script_contains_wait_and_restart(tmp_path, qtbot):
     downloader.download_path = tmp_path / "NAI-Mover-update.exe"
     current_exe = Path(r"C:\Program Files\NAI-Mover\NAI-Mover.exe")
 
-    script = downloader._build_windows_update_script(current_exe)
+    script = downloader._build_windows_update_script(current_exe, 1234)
 
     assert "tasklist /fi \"imagename eq NAI-Mover.exe\"" in script
     assert f"move /y \"{downloader.download_path}\" \"{current_exe}\"" in script
     assert f"start \"\" \"{current_exe}\"" in script
+    assert "set LOGFILE=%TEMP%\\nai_mover_update.log" in script
+    assert "set MAX_RETRIES=5" in script
+    assert "set EXPECTED_SIZE=1234" in script

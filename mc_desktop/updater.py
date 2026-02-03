@@ -6,6 +6,7 @@ import sys
 import stat
 import tempfile
 import subprocess
+import ctypes
 from pathlib import Path, PureWindowsPath
 from packaging import version
 from PySide6.QtCore import QObject, Signal, QTimer
@@ -22,6 +23,8 @@ GITHUB_REPO = "NationalAperture/MC-Desktop"
 RELEASES_API_URL = f"https://api.github.com/repos/{GITHUB_REPO}/releases/latest"
 
 RESTART_QUIT_DELAY_MS = 100
+WINDOWS_UPDATE_LOG_NAME = "nai_mover_update.log"
+WINDOWS_UPDATE_ERROR_NAME = "nai_mover_update.failed"
 
 
 def get_executable_path() -> Path:
@@ -32,6 +35,34 @@ def get_executable_path() -> Path:
     else:
         # Running as script (for development)
         return Path(__file__).parent.parent / "dist" / "NAI-Mover"
+
+
+def _is_windows_admin() -> bool:
+    if sys.platform != "win32":
+        return False
+    try:
+        return ctypes.windll.shell32.IsUserAnAdmin() != 0
+    except Exception:
+        return False
+
+
+def _is_windows_protected_path(path: Path) -> bool:
+    if sys.platform != "win32":
+        return False
+    protected_roots = {
+        os.environ.get("ProgramFiles"),
+        os.environ.get("ProgramFiles(x86)"),
+        os.environ.get("ProgramW6432"),
+        os.environ.get("SystemRoot"),
+    }
+    path_str = str(PureWindowsPath(str(path))).lower().rstrip("\\") + "\\"
+    for root in protected_roots:
+        if not root:
+            continue
+        root_str = str(PureWindowsPath(root)).lower().rstrip("\\") + "\\"
+        if path_str.startswith(root_str):
+            return True
+    return False
 
 
 class UpdateChecker(QObject):
@@ -254,9 +285,19 @@ class UpdateDownloader(QObject):
 
     def _install_windows(self, current_exe: Path):
         """Install on Windows using a batch script that runs after app exits."""
+        if _is_windows_protected_path(current_exe) and not _is_windows_admin():
+            message = (
+                "Update requires administrator privileges when installed in a protected folder. "
+                "Please run NAI-Mover as administrator and try again."
+            )
+            logger.warning(message)
+            self.install_failed.emit(message)
+            return
+
         batch_path = Path(tempfile.gettempdir()) / "nai_mover_update.bat"
 
-        batch_content = self._build_windows_update_script(current_exe)
+        expected_size = self.download_path.stat().st_size if self.download_path else None
+        batch_content = self._build_windows_update_script(current_exe, expected_size)
         with open(batch_path, 'w') as f:
             f.write(batch_content)
 
@@ -279,22 +320,64 @@ class UpdateDownloader(QObject):
         from PySide6.QtWidgets import QApplication
         QTimer.singleShot(RESTART_QUIT_DELAY_MS, QApplication.quit)
 
-    def _build_windows_update_script(self, current_exe: Path) -> str:
+    def _build_windows_update_script(self, current_exe: Path, expected_size: int | None) -> str:
         """Build the Windows update batch script with a safe wait loop."""
         if not self.download_path:
             raise RuntimeError("Download path not set for Windows update")
 
         exe_name = PureWindowsPath(str(current_exe)).name
+        expected_size_value = expected_size if expected_size is not None else 0
         return f'''@echo off
+setlocal enableextensions
+set LOGFILE=%TEMP%\\{WINDOWS_UPDATE_LOG_NAME}
+set ERRORFILE=%TEMP%\\{WINDOWS_UPDATE_ERROR_NAME}
+set EXPECTED_SIZE={expected_size_value}
+echo [%DATE% %TIME%] Update script started >> "%LOGFILE%"
 :wait_loop
 tasklist /fi "imagename eq {exe_name}" 2>nul | find /i "{exe_name}" >nul
 if not errorlevel 1 (
     timeout /t 1 /nobreak >nul
     goto wait_loop
 )
-timeout /t 1 /nobreak >nul
-move /y "{self.download_path}" "{current_exe}"
-if errorlevel 1 exit /b 1
+echo [%DATE% %TIME%] Process exited >> "%LOGFILE%"
+timeout /t 3 /nobreak >nul
+
+set RETRIES=0
+set MAX_RETRIES=5
+set DELAY=2
+:move_retry
+set /a RETRIES+=1
+echo [%DATE% %TIME%] Move attempt %RETRIES% >> "%LOGFILE%"
+move /y "{self.download_path}" "{current_exe}" >> "%LOGFILE%" 2>&1
+if errorlevel 1 (
+    if %RETRIES% lss %MAX_RETRIES% (
+        echo [%DATE% %TIME%] Move failed, retrying... >> "%LOGFILE%"
+        timeout /t %DELAY% /nobreak >nul
+        set /a DELAY+=1
+        goto move_retry
+    )
+    echo [%DATE% %TIME%] Move failed after %MAX_RETRIES% attempts >> "%LOGFILE%"
+    echo Move failed after %MAX_RETRIES% attempts > "%ERRORFILE%"
+    powershell -Command "try {{Add-Type -AssemblyName PresentationFramework; [System.Windows.MessageBox]::Show('Update failed to replace the application. Please try again or reinstall.','NAI-Mover Update Failed')}} catch {{}}" >nul 2>&1
+    msg * Update failed to replace the application. Please try again or reinstall. >nul 2>&1
+    exit /b 1
+)
+
+if not exist "{current_exe}" (
+    echo [%DATE% %TIME%] Destination exe missing after move >> "%LOGFILE%"
+    echo Destination exe missing after move > "%ERRORFILE%"
+    exit /b 1
+)
+if %EXPECTED_SIZE% gtr 0 (
+    for %%A in ("{current_exe}") do set DEST_SIZE=%%~zA
+    if not "%DEST_SIZE%"=="%EXPECTED_SIZE%" (
+        echo [%DATE% %TIME%] Destination size mismatch: %DEST_SIZE% vs %EXPECTED_SIZE% >> "%LOGFILE%"
+        echo Destination size mismatch > "%ERRORFILE%"
+        exit /b 1
+    )
+)
+
+echo [%DATE% %TIME%] Move verified, starting app >> "%LOGFILE%"
 start "" "{current_exe}"
 del "%~f0"
 '''
