@@ -32,7 +32,6 @@ QWidget
 QTableView
 {
     alternate-background-color: darkgreen;
-    border: 1px solid gold;
     gridline-color: ghostwhite;
     selection-color: black;
 }
@@ -58,7 +57,6 @@ QLabel#product_name {
 QTextEdit
 {
     color: #ffffff;
-    border: 1px solid gold;
 }
 
 /*------QSlider------*/
@@ -110,12 +108,7 @@ QTabBar::tab
 
 }
 
-QTabWidget::pane
-{
-    border: 1px solid qlineargradient(spread:repeat, x1:1, y1:0, x2:1, y2:1, stop:0 rgba(235, 189, 0, 255),stop:1 rgba(225, 180, 0, 255));
-    top: 1px;
 
-}
 
 QTabBar::tab:!selected
 {
@@ -544,6 +537,7 @@ QGroupBox::title
 	subcontrol-position: top left;
     subcontrol-origin: margin;
     padding: 5px;
+    margin-left: 10px;
 	min-width: 100px;
 	border: 1px solid #1d1d1d;
 	border-top-left-radius: 4px;
@@ -856,7 +850,7 @@ QRadioButton#controlpannel
 
 QRadioButton:checked
 {
-    border: 2px solid gold;
+    border-bottom: 1px solid gold;
 }
 
 QRadioButton:checked#controlpannel
@@ -867,7 +861,7 @@ QRadioButton:checked#controlpannel
 
 QRadioButton:hover
 {
-    border: 2px;
+    border-bottom: 1px;
     border-color: goldenrod;
     border-style: solid;
 }
@@ -875,7 +869,6 @@ QRadioButton:hover
 
 QRadioButton::indicator::unchecked:hover 
 {
-	background-color: #d3d3d3;
 	border: 2px solid #002b2b;
 	border-radius: 6px;
 	border-color: yellow;

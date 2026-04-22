@@ -4,6 +4,7 @@
         "connection_form.ui",
         "motor_stats.ui",
         "record_system.ui",
-        "record_bus.ui"
+        "record_bus.ui",
+        "settings.ui"
     ]
 }
