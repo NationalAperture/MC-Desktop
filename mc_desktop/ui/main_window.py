@@ -189,8 +189,6 @@ class Connection(QWidget):
         for port, desc, hwid in ports:
             self.ui.port_list.addItem(port)
 
-
-
 class MotorStats(QWidget):
     def __init__(self, parent: MainWindow, title: str) -> None:
         super().__init__()
@@ -801,19 +799,28 @@ class MainWindow(QMainWindow):
             motor_stat = self.motor_stats[node_index]
             motor_stat.update_motor_values(values)
 
+    def add_node_sorted(self, node_id) -> None:
+        for i in range(self.comboBox.count()):
+            if self.comboBox.itemText(i) > node_id:
+                self.comboBox.insertItem(i, node_id)
+                return
+
+        #This allows the first item to get into the list
+        self.comboBox.addItem(node_id)
+
     def add_node(self, node_id: str) -> bool:
-        if not node_id:
-            return False
-        was_empty = self.comboBox.count() == 0
         added = self.node_manager.add_node(node_id)
         if not added:
             logger.warning("Node %s already exists; skipping add.", node_id)
             return False
-        self.comboBox.addItem(node_id)
+
+        was_empty = self.comboBox.count() == 0
+        self.add_node_sorted(node_id)
         motor_stat = MotorStats(self, node_id)
         self.motor_stats.append(motor_stat)
         self._rebuild_node_index()
         self.repopulate_layout()
+        #If the user removes all nodes, stop the polling until they add them back
         if was_empty:
             self.serial.enable_polling()
         return True
@@ -839,8 +846,12 @@ class MainWindow(QMainWindow):
         self.repopulate_layout()
         return True
 
+    def sort_motor_stats(self) -> None:
+        self.motor_stats.sort(key=lambda m: int(m.node_id) if m.node_id and m.node_id.isdigit() else float("inf"))
+
     def repopulate_layout(self) -> None:
         clear_layout(self.ui.system_monitor.layout(), False)
+        self.sort_motor_stats()
         for motor_stat in self.motor_stats:
             self.ui.system_monitor.layout().addWidget(motor_stat)
         self.ui.system_monitor.layout().addItem(self.verticalSpacer)
