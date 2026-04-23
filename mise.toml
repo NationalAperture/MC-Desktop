@@ -1,0 +1,30 @@
+[tools]
+python = "3.13"
+
+[tasks.install]
+description = "Install project dependencies"
+run = "uv sync"
+
+[tasks.run]
+description = "Run the application"
+run = "uv run mc-desktop"
+
+[tasks.test]
+description = "Run the test suite"
+run = "uv run pytest"
+
+[tasks.generate-ui]
+description = "Compile Qt Designer .ui files to PySide6 form classes"
+run = "uv run python scripts/generate_ui.py"
+
+[tasks.all-in-one]
+description ="Generates .py files from .ui files and then runs the program"
+run = "uv run python scripts/generate_ui.py && uv run mc-desktop"
+
+[tasks.build]
+description = "Build standalone executable with PyInstaller"
+run = "uv run pyinstaller NAI-Mover.spec"
+
+[tasks.clean]
+description = "Remove build artifacts"
+run = "rm -rf build dist mc_desktop.egg-info"
