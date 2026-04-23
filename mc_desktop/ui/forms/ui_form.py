@@ -1113,3 +1113,4 @@ class Ui_MainWindow(object):
         self.refresh_motion_btn.setText(QCoreApplication.translate("MainWindow", u"Refresh Motion Information", None))
         self.err_input.setPlaceholderText(QCoreApplication.translate("MainWindow", u"Enter Error Limit", None))
     # retranslateUi
+
