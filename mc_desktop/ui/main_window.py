@@ -128,8 +128,9 @@ class Connection(QWidget):
 
     def __setup__(self, parent: MainWindow) -> None:
         self.parent = parent
+        self.is_port_open = False
         self.ui.search_ports_btn.pressed.connect(self.search_ports)
-        self.ui.connect_btn.clicked.connect(self.select_port)
+        self.ui.connect_btn.clicked.connect(self.toggle_port)
         self.ui.add_node_btn.pressed.connect(self.add_node)
         self.ui.remove_node_btn.pressed.connect(self.remove_node)
         self.ui.update_node_btn.pressed.connect(self.update_node)
@@ -139,6 +140,9 @@ class Connection(QWidget):
         self.parent.serial.connection.baudrate = self.ui.baud_rates.currentText()
 
     def add_node(self) -> None:
+        if self.ui.add_node_IDNs_cb.currentIndex() < 0:
+            return
+
         node_id = self.ui.add_node_IDNs_cb.currentText()
         if self.parent.add_node(node_id):
             self.ui.remove_node_IDNs_cb.addItem(node_id)
@@ -158,9 +162,9 @@ class Connection(QWidget):
             if int(self.ui.add_node_IDNs_cb.itemText(i)) > int(node_id):
                 print(f"node: {self.ui.add_node_IDNs_cb.itemText(i)}, index: {i}")
                 self.ui.add_node_IDNs_cb.insertItem(i, node_id)
-                break
+                return
 
-
+        self.ui.add_node_IDNs_cb.addItem(node_id)
 
     def update_node(self) -> None:
         # This changes the currently selected node's id, to the new id the user has just entered.
@@ -173,14 +177,30 @@ class Connection(QWidget):
                     self.ui.remove_node_IDNs_cb.setItemText(i, to_value)
                 break
 
-    def select_port(self) -> None:
+    def toggle_port(self) -> None:
+        if not self.is_port_open:
+            self.open_port()
+        elif self.is_port_open:
+            self.close_port()
+        else:
+            print("True False statement is broken, Connection toggle port.")
+
+    def open_port(self) -> None:
+
+
         port = self.ui.port_list.selectedItems()[0].text()
         self.parent.serial.port = port
         self.parent.serial.baudrate = self.ui.baud_rates.currentText()
         successful = self.parent.serial.setup_connection()
         if successful:
             self.parent.set_connection_status(True)
+            self.ui.connect_btn.setText("Close Port")
+            self.is_port_open = True
             # self.parent.get_node_values()
+
+    def close_port(self) -> None:
+        self.ui.connect_btn.setText("Open Port")
+        self.is_port_open = False
 
     def search_ports(self) -> None:
         self.ui.port_list.clear()
@@ -850,11 +870,11 @@ class MainWindow(QMainWindow):
         self.motor_stats.sort(key=lambda m: int(m.node_id) if m.node_id and m.node_id.isdigit() else float("inf"))
 
     def repopulate_layout(self) -> None:
-        clear_layout(self.ui.system_monitor.layout(), False)
+        clear_layout(self.ui.system_monitor_scroll.layout(), False)
         self.sort_motor_stats()
         for motor_stat in self.motor_stats:
-            self.ui.system_monitor.layout().addWidget(motor_stat)
-        self.ui.system_monitor.layout().addItem(self.verticalSpacer)
+            self.ui.system_monitor_scroll.layout().addWidget(motor_stat)
+        self.ui.system_monitor_scroll.layout().addItem(self.verticalSpacer)
 
     def update_node_id(self, index: int, old_node_id: str, new_node_id: str) -> bool:
         if not new_node_id or new_node_id == old_node_id:

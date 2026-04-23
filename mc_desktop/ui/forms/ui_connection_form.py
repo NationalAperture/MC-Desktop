@@ -47,6 +47,7 @@ class Ui_Connection_Form(object):
         self.baud_rates.setObjectName(u"baud_rates")
         font = QFont()
         font.setPointSize(13)
+        font.setBold(True)
         self.baud_rates.setFont(font)
 
         self.gridLayout_2.addWidget(self.baud_rates, 2, 1, 1, 1)
@@ -57,7 +58,7 @@ class Ui_Connection_Form(object):
         font1 = QFont()
         font1.setPointSize(13)
         font1.setBold(True)
-        font1.setItalic(True)
+        font1.setItalic(False)
         self.connect_btn.setFont(font1)
 
         self.gridLayout_2.addWidget(self.connect_btn, 3, 0, 1, 2)
@@ -81,7 +82,7 @@ class Ui_Connection_Form(object):
         self.scrollArea.setWidgetResizable(True)
         self.scrollAreaWidgetContents = QWidget()
         self.scrollAreaWidgetContents.setObjectName(u"scrollAreaWidgetContents")
-        self.scrollAreaWidgetContents.setGeometry(QRect(0, 0, 460, 150))
+        self.scrollAreaWidgetContents.setGeometry(QRect(0, 0, 460, 210))
         self.verticalLayout = QVBoxLayout(self.scrollAreaWidgetContents)
         self.verticalLayout.setObjectName(u"verticalLayout")
         self.port_list = QListWidget(self.scrollAreaWidgetContents)
@@ -103,11 +104,13 @@ class Ui_Connection_Form(object):
         self.gridLayout_3.setObjectName(u"gridLayout_3")
         self.to_node_IDNs_cb = QComboBox(self.groupBox_3)
         self.to_node_IDNs_cb.setObjectName(u"to_node_IDNs_cb")
+        self.to_node_IDNs_cb.setFont(font)
 
         self.gridLayout_3.addWidget(self.to_node_IDNs_cb, 2, 1, 1, 1)
 
         self.from_node_IDNs_cb = QComboBox(self.groupBox_3)
         self.from_node_IDNs_cb.setObjectName(u"from_node_IDNs_cb")
+        self.from_node_IDNs_cb.setFont(font)
 
         self.gridLayout_3.addWidget(self.from_node_IDNs_cb, 2, 0, 1, 1)
 
@@ -118,11 +121,7 @@ class Ui_Connection_Form(object):
         sizePolicy1.setVerticalStretch(0)
         sizePolicy1.setHeightForWidth(self.add_node_btn.sizePolicy().hasHeightForWidth())
         self.add_node_btn.setSizePolicy(sizePolicy1)
-        font2 = QFont()
-        font2.setPointSize(13)
-        font2.setBold(True)
-        font2.setItalic(False)
-        self.add_node_btn.setFont(font2)
+        self.add_node_btn.setFont(font1)
 
         self.gridLayout_3.addWidget(self.add_node_btn, 0, 2, 1, 2)
 
@@ -130,6 +129,7 @@ class Ui_Connection_Form(object):
         self.update_node_btn.setObjectName(u"update_node_btn")
         sizePolicy1.setHeightForWidth(self.update_node_btn.sizePolicy().hasHeightForWidth())
         self.update_node_btn.setSizePolicy(sizePolicy1)
+        self.update_node_btn.setFont(font)
 
         self.gridLayout_3.addWidget(self.update_node_btn, 2, 2, 1, 2)
 
@@ -137,6 +137,7 @@ class Ui_Connection_Form(object):
         self.remove_node_btn.setObjectName(u"remove_node_btn")
         sizePolicy1.setHeightForWidth(self.remove_node_btn.sizePolicy().hasHeightForWidth())
         self.remove_node_btn.setSizePolicy(sizePolicy1)
+        self.remove_node_btn.setFont(font)
 
         self.gridLayout_3.addWidget(self.remove_node_btn, 1, 2, 1, 2)
 
@@ -153,12 +154,14 @@ class Ui_Connection_Form(object):
         self.add_node_IDNs_cb.addItem("")
         self.add_node_IDNs_cb.addItem("")
         self.add_node_IDNs_cb.setObjectName(u"add_node_IDNs_cb")
+        self.add_node_IDNs_cb.setFont(font)
         self.add_node_IDNs_cb.setInsertPolicy(QComboBox.InsertPolicy.NoInsert)
 
         self.gridLayout_3.addWidget(self.add_node_IDNs_cb, 0, 1, 1, 1)
 
         self.remove_node_IDNs_cb = QComboBox(self.groupBox_3)
         self.remove_node_IDNs_cb.setObjectName(u"remove_node_IDNs_cb")
+        self.remove_node_IDNs_cb.setFont(font)
 
         self.gridLayout_3.addWidget(self.remove_node_IDNs_cb, 1, 1, 1, 1)
 

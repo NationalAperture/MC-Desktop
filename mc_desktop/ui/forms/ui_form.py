@@ -19,8 +19,9 @@ from PySide6.QtGui import (QAction, QBrush, QColor, QConicalGradient,
 from PySide6.QtWidgets import (QAbstractItemView, QApplication, QComboBox, QGridLayout,
     QGroupBox, QHeaderView, QLabel, QLineEdit,
     QMainWindow, QMenuBar, QPushButton, QRadioButton,
-    QSizePolicy, QSplitter, QStackedWidget, QStatusBar,
-    QTableWidget, QTableWidgetItem, QVBoxLayout, QWidget)
+    QScrollArea, QSizePolicy, QSplitter, QStackedWidget,
+    QStatusBar, QTableWidget, QTableWidgetItem, QVBoxLayout,
+    QWidget)
 
 class Ui_MainWindow(object):
     def setupUi(self, MainWindow):
@@ -167,6 +168,25 @@ class Ui_MainWindow(object):
         self.system_monitor.setFont(font1)
         self.verticalLayout_5 = QVBoxLayout(self.system_monitor)
         self.verticalLayout_5.setObjectName(u"verticalLayout_5")
+        self.scrollArea = QScrollArea(self.system_monitor)
+        self.scrollArea.setObjectName(u"scrollArea")
+        sizePolicy2 = QSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
+        sizePolicy2.setHorizontalStretch(0)
+        sizePolicy2.setVerticalStretch(1)
+        sizePolicy2.setHeightForWidth(self.scrollArea.sizePolicy().hasHeightForWidth())
+        self.scrollArea.setSizePolicy(sizePolicy2)
+        self.scrollArea.setMinimumSize(QSize(0, 0))
+        self.scrollArea.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        self.scrollArea.setWidgetResizable(True)
+        self.system_monitor_scroll = QWidget()
+        self.system_monitor_scroll.setObjectName(u"system_monitor_scroll")
+        self.system_monitor_scroll.setGeometry(QRect(0, 0, 152, 943))
+        self.verticalLayout_4 = QVBoxLayout(self.system_monitor_scroll)
+        self.verticalLayout_4.setObjectName(u"verticalLayout_4")
+        self.scrollArea.setWidget(self.system_monitor_scroll)
+
+        self.verticalLayout_5.addWidget(self.scrollArea)
+
         self.splitter_2.addWidget(self.system_monitor)
         self.splitter = QSplitter(self.splitter_2)
         self.splitter.setObjectName(u"splitter")
@@ -205,11 +225,11 @@ class Ui_MainWindow(object):
 
         self.variable_amount_value = QLineEdit(self.macro_group_box)
         self.variable_amount_value.setObjectName(u"variable_amount_value")
-        sizePolicy2 = QSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Fixed)
-        sizePolicy2.setHorizontalStretch(0)
-        sizePolicy2.setVerticalStretch(0)
-        sizePolicy2.setHeightForWidth(self.variable_amount_value.sizePolicy().hasHeightForWidth())
-        self.variable_amount_value.setSizePolicy(sizePolicy2)
+        sizePolicy3 = QSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Fixed)
+        sizePolicy3.setHorizontalStretch(0)
+        sizePolicy3.setVerticalStretch(0)
+        sizePolicy3.setHeightForWidth(self.variable_amount_value.sizePolicy().hasHeightForWidth())
+        self.variable_amount_value.setSizePolicy(sizePolicy3)
 
         self.gridLayout_4.addWidget(self.variable_amount_value, 0, 3, 1, 1)
 
@@ -251,11 +271,11 @@ class Ui_MainWindow(object):
         self.splitter_3.addWidget(self.macro_group_box)
         self.groupBox_4 = QGroupBox(self.splitter_3)
         self.groupBox_4.setObjectName(u"groupBox_4")
-        sizePolicy3 = QSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
-        sizePolicy3.setHorizontalStretch(0)
-        sizePolicy3.setVerticalStretch(0)
-        sizePolicy3.setHeightForWidth(self.groupBox_4.sizePolicy().hasHeightForWidth())
-        self.groupBox_4.setSizePolicy(sizePolicy3)
+        sizePolicy4 = QSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
+        sizePolicy4.setHorizontalStretch(0)
+        sizePolicy4.setVerticalStretch(0)
+        sizePolicy4.setHeightForWidth(self.groupBox_4.sizePolicy().hasHeightForWidth())
+        self.groupBox_4.setSizePolicy(sizePolicy4)
         self.groupBox_4.setMaximumSize(QSize(16777215, 16777215))
         self.groupBox_4.setFont(font1)
         self.gridLayout_3 = QGridLayout(self.groupBox_4)
@@ -334,11 +354,11 @@ class Ui_MainWindow(object):
 
         self.save_config_btn = QPushButton(self.groupBox_10)
         self.save_config_btn.setObjectName(u"save_config_btn")
-        sizePolicy4 = QSizePolicy(QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Expanding)
-        sizePolicy4.setHorizontalStretch(0)
-        sizePolicy4.setVerticalStretch(0)
-        sizePolicy4.setHeightForWidth(self.save_config_btn.sizePolicy().hasHeightForWidth())
-        self.save_config_btn.setSizePolicy(sizePolicy4)
+        sizePolicy5 = QSizePolicy(QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Expanding)
+        sizePolicy5.setHorizontalStretch(0)
+        sizePolicy5.setVerticalStretch(0)
+        sizePolicy5.setHeightForWidth(self.save_config_btn.sizePolicy().hasHeightForWidth())
+        self.save_config_btn.setSizePolicy(sizePolicy5)
         self.save_config_btn.setMinimumSize(QSize(0, 60))
         self.save_config_btn.setFont(font2)
 
@@ -346,8 +366,8 @@ class Ui_MainWindow(object):
 
         self.load_config_btn = QPushButton(self.groupBox_10)
         self.load_config_btn.setObjectName(u"load_config_btn")
-        sizePolicy4.setHeightForWidth(self.load_config_btn.sizePolicy().hasHeightForWidth())
-        self.load_config_btn.setSizePolicy(sizePolicy4)
+        sizePolicy5.setHeightForWidth(self.load_config_btn.sizePolicy().hasHeightForWidth())
+        self.load_config_btn.setSizePolicy(sizePolicy5)
         self.load_config_btn.setMinimumSize(QSize(0, 60))
         self.load_config_btn.setFont(font2)
 
@@ -355,8 +375,8 @@ class Ui_MainWindow(object):
 
         self.erase_config_btn = QPushButton(self.groupBox_10)
         self.erase_config_btn.setObjectName(u"erase_config_btn")
-        sizePolicy4.setHeightForWidth(self.erase_config_btn.sizePolicy().hasHeightForWidth())
-        self.erase_config_btn.setSizePolicy(sizePolicy4)
+        sizePolicy5.setHeightForWidth(self.erase_config_btn.sizePolicy().hasHeightForWidth())
+        self.erase_config_btn.setSizePolicy(sizePolicy5)
         self.erase_config_btn.setMinimumSize(QSize(0, 60))
         self.erase_config_btn.setFont(font2)
 
@@ -375,46 +395,46 @@ class Ui_MainWindow(object):
         self.gridLayout.setObjectName(u"gridLayout")
         self.lower_limit_value = QLabel(self.groupBox_14)
         self.lower_limit_value.setObjectName(u"lower_limit_value")
-        sizePolicy5 = QSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Preferred)
-        sizePolicy5.setHorizontalStretch(0)
-        sizePolicy5.setVerticalStretch(0)
-        sizePolicy5.setHeightForWidth(self.lower_limit_value.sizePolicy().hasHeightForWidth())
-        self.lower_limit_value.setSizePolicy(sizePolicy5)
+        sizePolicy6 = QSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Preferred)
+        sizePolicy6.setHorizontalStretch(0)
+        sizePolicy6.setVerticalStretch(0)
+        sizePolicy6.setHeightForWidth(self.lower_limit_value.sizePolicy().hasHeightForWidth())
+        self.lower_limit_value.setSizePolicy(sizePolicy6)
         self.lower_limit_value.setFont(font2)
 
         self.gridLayout.addWidget(self.lower_limit_value, 1, 0, 1, 1)
 
         self.update_upper_btn = QPushButton(self.groupBox_14)
         self.update_upper_btn.setObjectName(u"update_upper_btn")
-        sizePolicy6 = QSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Expanding)
-        sizePolicy6.setHorizontalStretch(0)
-        sizePolicy6.setVerticalStretch(0)
-        sizePolicy6.setHeightForWidth(self.update_upper_btn.sizePolicy().hasHeightForWidth())
-        self.update_upper_btn.setSizePolicy(sizePolicy6)
+        sizePolicy7 = QSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Expanding)
+        sizePolicy7.setHorizontalStretch(0)
+        sizePolicy7.setVerticalStretch(0)
+        sizePolicy7.setHeightForWidth(self.update_upper_btn.sizePolicy().hasHeightForWidth())
+        self.update_upper_btn.setSizePolicy(sizePolicy7)
         self.update_upper_btn.setFont(font2)
 
         self.gridLayout.addWidget(self.update_upper_btn, 3, 3, 1, 1)
 
         self.update_lower_btn = QPushButton(self.groupBox_14)
         self.update_lower_btn.setObjectName(u"update_lower_btn")
-        sizePolicy6.setHeightForWidth(self.update_lower_btn.sizePolicy().hasHeightForWidth())
-        self.update_lower_btn.setSizePolicy(sizePolicy6)
+        sizePolicy7.setHeightForWidth(self.update_lower_btn.sizePolicy().hasHeightForWidth())
+        self.update_lower_btn.setSizePolicy(sizePolicy7)
         self.update_lower_btn.setFont(font2)
 
         self.gridLayout.addWidget(self.update_lower_btn, 1, 3, 1, 1)
 
         self.upper_limit_value = QLabel(self.groupBox_14)
         self.upper_limit_value.setObjectName(u"upper_limit_value")
-        sizePolicy5.setHeightForWidth(self.upper_limit_value.sizePolicy().hasHeightForWidth())
-        self.upper_limit_value.setSizePolicy(sizePolicy5)
+        sizePolicy6.setHeightForWidth(self.upper_limit_value.sizePolicy().hasHeightForWidth())
+        self.upper_limit_value.setSizePolicy(sizePolicy6)
         self.upper_limit_value.setFont(font2)
 
         self.gridLayout.addWidget(self.upper_limit_value, 3, 0, 1, 1)
 
         self.upper_limit_input = QLineEdit(self.groupBox_14)
         self.upper_limit_input.setObjectName(u"upper_limit_input")
-        sizePolicy2.setHeightForWidth(self.upper_limit_input.sizePolicy().hasHeightForWidth())
-        self.upper_limit_input.setSizePolicy(sizePolicy2)
+        sizePolicy3.setHeightForWidth(self.upper_limit_input.sizePolicy().hasHeightForWidth())
+        self.upper_limit_input.setSizePolicy(sizePolicy3)
         self.upper_limit_input.setMinimumSize(QSize(0, 0))
         self.upper_limit_input.setFont(font1)
 
@@ -422,8 +442,8 @@ class Ui_MainWindow(object):
 
         self.pos_tolerance_input = QLineEdit(self.groupBox_14)
         self.pos_tolerance_input.setObjectName(u"pos_tolerance_input")
-        sizePolicy2.setHeightForWidth(self.pos_tolerance_input.sizePolicy().hasHeightForWidth())
-        self.pos_tolerance_input.setSizePolicy(sizePolicy2)
+        sizePolicy3.setHeightForWidth(self.pos_tolerance_input.sizePolicy().hasHeightForWidth())
+        self.pos_tolerance_input.setSizePolicy(sizePolicy3)
         self.pos_tolerance_input.setMinimumSize(QSize(0, 0))
         self.pos_tolerance_input.setFont(font1)
 
@@ -431,8 +451,8 @@ class Ui_MainWindow(object):
 
         self.lower_limit_input = QLineEdit(self.groupBox_14)
         self.lower_limit_input.setObjectName(u"lower_limit_input")
-        sizePolicy2.setHeightForWidth(self.lower_limit_input.sizePolicy().hasHeightForWidth())
-        self.lower_limit_input.setSizePolicy(sizePolicy2)
+        sizePolicy3.setHeightForWidth(self.lower_limit_input.sizePolicy().hasHeightForWidth())
+        self.lower_limit_input.setSizePolicy(sizePolicy3)
         self.lower_limit_input.setMinimumSize(QSize(0, 0))
         self.lower_limit_input.setFont(font1)
 
@@ -440,40 +460,40 @@ class Ui_MainWindow(object):
 
         self.pos_tolerance_value = QLabel(self.groupBox_14)
         self.pos_tolerance_value.setObjectName(u"pos_tolerance_value")
-        sizePolicy5.setHeightForWidth(self.pos_tolerance_value.sizePolicy().hasHeightForWidth())
-        self.pos_tolerance_value.setSizePolicy(sizePolicy5)
+        sizePolicy6.setHeightForWidth(self.pos_tolerance_value.sizePolicy().hasHeightForWidth())
+        self.pos_tolerance_value.setSizePolicy(sizePolicy6)
         self.pos_tolerance_value.setFont(font2)
 
         self.gridLayout.addWidget(self.pos_tolerance_value, 5, 0, 1, 1)
 
         self.restore_defualt_values_btn = QPushButton(self.groupBox_14)
         self.restore_defualt_values_btn.setObjectName(u"restore_defualt_values_btn")
-        sizePolicy6.setHeightForWidth(self.restore_defualt_values_btn.sizePolicy().hasHeightForWidth())
-        self.restore_defualt_values_btn.setSizePolicy(sizePolicy6)
+        sizePolicy7.setHeightForWidth(self.restore_defualt_values_btn.sizePolicy().hasHeightForWidth())
+        self.restore_defualt_values_btn.setSizePolicy(sizePolicy7)
         self.restore_defualt_values_btn.setFont(font2)
 
         self.gridLayout.addWidget(self.restore_defualt_values_btn, 0, 3, 1, 1)
 
         self.update_pos_tol_btn = QPushButton(self.groupBox_14)
         self.update_pos_tol_btn.setObjectName(u"update_pos_tol_btn")
-        sizePolicy6.setHeightForWidth(self.update_pos_tol_btn.sizePolicy().hasHeightForWidth())
-        self.update_pos_tol_btn.setSizePolicy(sizePolicy6)
+        sizePolicy7.setHeightForWidth(self.update_pos_tol_btn.sizePolicy().hasHeightForWidth())
+        self.update_pos_tol_btn.setSizePolicy(sizePolicy7)
         self.update_pos_tol_btn.setFont(font2)
 
         self.gridLayout.addWidget(self.update_pos_tol_btn, 5, 3, 1, 1)
 
         self.refresh_advanced_btn = QPushButton(self.groupBox_14)
         self.refresh_advanced_btn.setObjectName(u"refresh_advanced_btn")
-        sizePolicy3.setHeightForWidth(self.refresh_advanced_btn.sizePolicy().hasHeightForWidth())
-        self.refresh_advanced_btn.setSizePolicy(sizePolicy3)
+        sizePolicy4.setHeightForWidth(self.refresh_advanced_btn.sizePolicy().hasHeightForWidth())
+        self.refresh_advanced_btn.setSizePolicy(sizePolicy4)
         self.refresh_advanced_btn.setFont(font2)
 
         self.gridLayout.addWidget(self.refresh_advanced_btn, 0, 0, 1, 2)
 
         self.label_3 = QLabel(self.groupBox_14)
         self.label_3.setObjectName(u"label_3")
-        sizePolicy5.setHeightForWidth(self.label_3.sizePolicy().hasHeightForWidth())
-        self.label_3.setSizePolicy(sizePolicy5)
+        sizePolicy6.setHeightForWidth(self.label_3.sizePolicy().hasHeightForWidth())
+        self.label_3.setSizePolicy(sizePolicy6)
         self.label_3.setFont(font2)
 
         self.gridLayout.addWidget(self.label_3, 6, 0, 1, 1)
@@ -486,16 +506,16 @@ class Ui_MainWindow(object):
         self.baud_rates.addItem("")
         self.baud_rates.addItem("")
         self.baud_rates.setObjectName(u"baud_rates")
-        sizePolicy2.setHeightForWidth(self.baud_rates.sizePolicy().hasHeightForWidth())
-        self.baud_rates.setSizePolicy(sizePolicy2)
+        sizePolicy3.setHeightForWidth(self.baud_rates.sizePolicy().hasHeightForWidth())
+        self.baud_rates.setSizePolicy(sizePolicy3)
         self.baud_rates.setFont(font2)
 
         self.gridLayout.addWidget(self.baud_rates, 6, 1, 1, 1)
 
         self.update_baud_rate_btn = QPushButton(self.groupBox_14)
         self.update_baud_rate_btn.setObjectName(u"update_baud_rate_btn")
-        sizePolicy6.setHeightForWidth(self.update_baud_rate_btn.sizePolicy().hasHeightForWidth())
-        self.update_baud_rate_btn.setSizePolicy(sizePolicy6)
+        sizePolicy7.setHeightForWidth(self.update_baud_rate_btn.sizePolicy().hasHeightForWidth())
+        self.update_baud_rate_btn.setSizePolicy(sizePolicy7)
         self.update_baud_rate_btn.setFont(font2)
 
         self.gridLayout.addWidget(self.update_baud_rate_btn, 6, 3, 1, 1)
@@ -513,16 +533,16 @@ class Ui_MainWindow(object):
         self.gridLayout_2.setObjectName(u"gridLayout_2")
         self.update_gh_btn = QPushButton(self.groupBox_11)
         self.update_gh_btn.setObjectName(u"update_gh_btn")
-        sizePolicy6.setHeightForWidth(self.update_gh_btn.sizePolicy().hasHeightForWidth())
-        self.update_gh_btn.setSizePolicy(sizePolicy6)
+        sizePolicy7.setHeightForWidth(self.update_gh_btn.sizePolicy().hasHeightForWidth())
+        self.update_gh_btn.setSizePolicy(sizePolicy7)
         self.update_gh_btn.setFont(font2)
 
         self.gridLayout_2.addWidget(self.update_gh_btn, 3, 3, 1, 1)
 
         self.TPI_input = QLineEdit(self.groupBox_11)
         self.TPI_input.setObjectName(u"TPI_input")
-        sizePolicy2.setHeightForWidth(self.TPI_input.sizePolicy().hasHeightForWidth())
-        self.TPI_input.setSizePolicy(sizePolicy2)
+        sizePolicy3.setHeightForWidth(self.TPI_input.sizePolicy().hasHeightForWidth())
+        self.TPI_input.setSizePolicy(sizePolicy3)
         self.TPI_input.setMinimumSize(QSize(0, 0))
         self.TPI_input.setFont(font1)
 
@@ -530,8 +550,8 @@ class Ui_MainWindow(object):
 
         self.GH_input = QLineEdit(self.groupBox_11)
         self.GH_input.setObjectName(u"GH_input")
-        sizePolicy2.setHeightForWidth(self.GH_input.sizePolicy().hasHeightForWidth())
-        self.GH_input.setSizePolicy(sizePolicy2)
+        sizePolicy3.setHeightForWidth(self.GH_input.sizePolicy().hasHeightForWidth())
+        self.GH_input.setSizePolicy(sizePolicy3)
         self.GH_input.setMinimumSize(QSize(0, 0))
         self.GH_input.setFont(font1)
 
@@ -539,8 +559,8 @@ class Ui_MainWindow(object):
 
         self.CPR_input = QLineEdit(self.groupBox_11)
         self.CPR_input.setObjectName(u"CPR_input")
-        sizePolicy2.setHeightForWidth(self.CPR_input.sizePolicy().hasHeightForWidth())
-        self.CPR_input.setSizePolicy(sizePolicy2)
+        sizePolicy3.setHeightForWidth(self.CPR_input.sizePolicy().hasHeightForWidth())
+        self.CPR_input.setSizePolicy(sizePolicy3)
         self.CPR_input.setMinimumSize(QSize(0, 0))
         self.CPR_input.setFont(font1)
 
@@ -548,16 +568,16 @@ class Ui_MainWindow(object):
 
         self.update_cpr_btn = QPushButton(self.groupBox_11)
         self.update_cpr_btn.setObjectName(u"update_cpr_btn")
-        sizePolicy6.setHeightForWidth(self.update_cpr_btn.sizePolicy().hasHeightForWidth())
-        self.update_cpr_btn.setSizePolicy(sizePolicy6)
+        sizePolicy7.setHeightForWidth(self.update_cpr_btn.sizePolicy().hasHeightForWidth())
+        self.update_cpr_btn.setSizePolicy(sizePolicy7)
         self.update_cpr_btn.setFont(font2)
 
         self.gridLayout_2.addWidget(self.update_cpr_btn, 5, 3, 1, 1)
 
         self.update_tpi_btn = QPushButton(self.groupBox_11)
         self.update_tpi_btn.setObjectName(u"update_tpi_btn")
-        sizePolicy6.setHeightForWidth(self.update_tpi_btn.sizePolicy().hasHeightForWidth())
-        self.update_tpi_btn.setSizePolicy(sizePolicy6)
+        sizePolicy7.setHeightForWidth(self.update_tpi_btn.sizePolicy().hasHeightForWidth())
+        self.update_tpi_btn.setSizePolicy(sizePolicy7)
         self.update_tpi_btn.setFont(font2)
 
         self.gridLayout_2.addWidget(self.update_tpi_btn, 4, 3, 1, 1)
@@ -582,24 +602,24 @@ class Ui_MainWindow(object):
 
         self.update_stage_btn = QPushButton(self.groupBox_11)
         self.update_stage_btn.setObjectName(u"update_stage_btn")
-        sizePolicy6.setHeightForWidth(self.update_stage_btn.sizePolicy().hasHeightForWidth())
-        self.update_stage_btn.setSizePolicy(sizePolicy6)
+        sizePolicy7.setHeightForWidth(self.update_stage_btn.sizePolicy().hasHeightForWidth())
+        self.update_stage_btn.setSizePolicy(sizePolicy7)
         self.update_stage_btn.setFont(font2)
 
         self.gridLayout_2.addWidget(self.update_stage_btn, 1, 3, 1, 1)
 
         self.update_unit_btn = QPushButton(self.groupBox_11)
         self.update_unit_btn.setObjectName(u"update_unit_btn")
-        sizePolicy6.setHeightForWidth(self.update_unit_btn.sizePolicy().hasHeightForWidth())
-        self.update_unit_btn.setSizePolicy(sizePolicy6)
+        sizePolicy7.setHeightForWidth(self.update_unit_btn.sizePolicy().hasHeightForWidth())
+        self.update_unit_btn.setSizePolicy(sizePolicy7)
         self.update_unit_btn.setFont(font2)
 
         self.gridLayout_2.addWidget(self.update_unit_btn, 2, 3, 1, 1)
 
         self.label_2 = QLabel(self.groupBox_11)
         self.label_2.setObjectName(u"label_2")
-        sizePolicy5.setHeightForWidth(self.label_2.sizePolicy().hasHeightForWidth())
-        self.label_2.setSizePolicy(sizePolicy5)
+        sizePolicy6.setHeightForWidth(self.label_2.sizePolicy().hasHeightForWidth())
+        self.label_2.setSizePolicy(sizePolicy6)
         self.label_2.setMinimumSize(QSize(0, 30))
         self.label_2.setFont(font2)
         self.label_2.setAlignment(Qt.AlignmentFlag.AlignLeading|Qt.AlignmentFlag.AlignLeft|Qt.AlignmentFlag.AlignVCenter)
@@ -608,8 +628,8 @@ class Ui_MainWindow(object):
 
         self.label = QLabel(self.groupBox_11)
         self.label.setObjectName(u"label")
-        sizePolicy5.setHeightForWidth(self.label.sizePolicy().hasHeightForWidth())
-        self.label.setSizePolicy(sizePolicy5)
+        sizePolicy6.setHeightForWidth(self.label.sizePolicy().hasHeightForWidth())
+        self.label.setSizePolicy(sizePolicy6)
         self.label.setMinimumSize(QSize(0, 30))
         self.label.setFont(font2)
         self.label.setAlignment(Qt.AlignmentFlag.AlignLeading|Qt.AlignmentFlag.AlignLeft|Qt.AlignmentFlag.AlignVCenter)
@@ -618,32 +638,32 @@ class Ui_MainWindow(object):
 
         self.gh_value_label = QLabel(self.groupBox_11)
         self.gh_value_label.setObjectName(u"gh_value_label")
-        sizePolicy5.setHeightForWidth(self.gh_value_label.sizePolicy().hasHeightForWidth())
-        self.gh_value_label.setSizePolicy(sizePolicy5)
+        sizePolicy6.setHeightForWidth(self.gh_value_label.sizePolicy().hasHeightForWidth())
+        self.gh_value_label.setSizePolicy(sizePolicy6)
         self.gh_value_label.setFont(font2)
 
         self.gridLayout_2.addWidget(self.gh_value_label, 3, 1, 1, 1)
 
         self.tpi_value_label = QLabel(self.groupBox_11)
         self.tpi_value_label.setObjectName(u"tpi_value_label")
-        sizePolicy5.setHeightForWidth(self.tpi_value_label.sizePolicy().hasHeightForWidth())
-        self.tpi_value_label.setSizePolicy(sizePolicy5)
+        sizePolicy6.setHeightForWidth(self.tpi_value_label.sizePolicy().hasHeightForWidth())
+        self.tpi_value_label.setSizePolicy(sizePolicy6)
         self.tpi_value_label.setFont(font2)
 
         self.gridLayout_2.addWidget(self.tpi_value_label, 4, 1, 1, 1)
 
         self.cpr_value_label = QLabel(self.groupBox_11)
         self.cpr_value_label.setObjectName(u"cpr_value_label")
-        sizePolicy5.setHeightForWidth(self.cpr_value_label.sizePolicy().hasHeightForWidth())
-        self.cpr_value_label.setSizePolicy(sizePolicy5)
+        sizePolicy6.setHeightForWidth(self.cpr_value_label.sizePolicy().hasHeightForWidth())
+        self.cpr_value_label.setSizePolicy(sizePolicy6)
         self.cpr_value_label.setFont(font2)
 
         self.gridLayout_2.addWidget(self.cpr_value_label, 5, 1, 1, 1)
 
         self.refresh_stage_btn = QPushButton(self.groupBox_11)
         self.refresh_stage_btn.setObjectName(u"refresh_stage_btn")
-        sizePolicy6.setHeightForWidth(self.refresh_stage_btn.sizePolicy().hasHeightForWidth())
-        self.refresh_stage_btn.setSizePolicy(sizePolicy6)
+        sizePolicy7.setHeightForWidth(self.refresh_stage_btn.sizePolicy().hasHeightForWidth())
+        self.refresh_stage_btn.setSizePolicy(sizePolicy7)
         self.refresh_stage_btn.setFont(font2)
 
         self.gridLayout_2.addWidget(self.refresh_stage_btn, 0, 1, 1, 2)
@@ -661,8 +681,8 @@ class Ui_MainWindow(object):
         self.gridLayout_7.setObjectName(u"gridLayout_7")
         self.kp_input = QLineEdit(self.groupBox_12)
         self.kp_input.setObjectName(u"kp_input")
-        sizePolicy2.setHeightForWidth(self.kp_input.sizePolicy().hasHeightForWidth())
-        self.kp_input.setSizePolicy(sizePolicy2)
+        sizePolicy3.setHeightForWidth(self.kp_input.sizePolicy().hasHeightForWidth())
+        self.kp_input.setSizePolicy(sizePolicy3)
         self.kp_input.setMinimumSize(QSize(0, 0))
         self.kp_input.setFont(font1)
 
@@ -670,16 +690,16 @@ class Ui_MainWindow(object):
 
         self.kd_value_label = QLabel(self.groupBox_12)
         self.kd_value_label.setObjectName(u"kd_value_label")
-        sizePolicy5.setHeightForWidth(self.kd_value_label.sizePolicy().hasHeightForWidth())
-        self.kd_value_label.setSizePolicy(sizePolicy5)
+        sizePolicy6.setHeightForWidth(self.kd_value_label.sizePolicy().hasHeightForWidth())
+        self.kd_value_label.setSizePolicy(sizePolicy6)
         self.kd_value_label.setFont(font2)
 
         self.gridLayout_7.addWidget(self.kd_value_label, 3, 0, 1, 1)
 
         self.ki_input = QLineEdit(self.groupBox_12)
         self.ki_input.setObjectName(u"ki_input")
-        sizePolicy2.setHeightForWidth(self.ki_input.sizePolicy().hasHeightForWidth())
-        self.ki_input.setSizePolicy(sizePolicy2)
+        sizePolicy3.setHeightForWidth(self.ki_input.sizePolicy().hasHeightForWidth())
+        self.ki_input.setSizePolicy(sizePolicy3)
         self.ki_input.setMinimumSize(QSize(0, 0))
         self.ki_input.setFont(font1)
 
@@ -687,16 +707,16 @@ class Ui_MainWindow(object):
 
         self.kp_update_btn = QPushButton(self.groupBox_12)
         self.kp_update_btn.setObjectName(u"kp_update_btn")
-        sizePolicy6.setHeightForWidth(self.kp_update_btn.sizePolicy().hasHeightForWidth())
-        self.kp_update_btn.setSizePolicy(sizePolicy6)
+        sizePolicy7.setHeightForWidth(self.kp_update_btn.sizePolicy().hasHeightForWidth())
+        self.kp_update_btn.setSizePolicy(sizePolicy7)
         self.kp_update_btn.setFont(font2)
 
         self.gridLayout_7.addWidget(self.kp_update_btn, 1, 2, 1, 1)
 
         self.kd_input = QLineEdit(self.groupBox_12)
         self.kd_input.setObjectName(u"kd_input")
-        sizePolicy2.setHeightForWidth(self.kd_input.sizePolicy().hasHeightForWidth())
-        self.kd_input.setSizePolicy(sizePolicy2)
+        sizePolicy3.setHeightForWidth(self.kd_input.sizePolicy().hasHeightForWidth())
+        self.kd_input.setSizePolicy(sizePolicy3)
         self.kd_input.setMinimumSize(QSize(0, 0))
         self.kd_input.setFont(font1)
 
@@ -704,8 +724,8 @@ class Ui_MainWindow(object):
 
         self.int_lmt_input = QLineEdit(self.groupBox_12)
         self.int_lmt_input.setObjectName(u"int_lmt_input")
-        sizePolicy2.setHeightForWidth(self.int_lmt_input.sizePolicy().hasHeightForWidth())
-        self.int_lmt_input.setSizePolicy(sizePolicy2)
+        sizePolicy3.setHeightForWidth(self.int_lmt_input.sizePolicy().hasHeightForWidth())
+        self.int_lmt_input.setSizePolicy(sizePolicy3)
         self.int_lmt_input.setMinimumSize(QSize(0, 0))
         self.int_lmt_input.setFont(font1)
 
@@ -713,80 +733,80 @@ class Ui_MainWindow(object):
 
         self.ki_update_btn = QPushButton(self.groupBox_12)
         self.ki_update_btn.setObjectName(u"ki_update_btn")
-        sizePolicy6.setHeightForWidth(self.ki_update_btn.sizePolicy().hasHeightForWidth())
-        self.ki_update_btn.setSizePolicy(sizePolicy6)
+        sizePolicy7.setHeightForWidth(self.ki_update_btn.sizePolicy().hasHeightForWidth())
+        self.ki_update_btn.setSizePolicy(sizePolicy7)
         self.ki_update_btn.setFont(font2)
 
         self.gridLayout_7.addWidget(self.ki_update_btn, 2, 2, 1, 1)
 
         self.int_lmt_update_btn = QPushButton(self.groupBox_12)
         self.int_lmt_update_btn.setObjectName(u"int_lmt_update_btn")
-        sizePolicy6.setHeightForWidth(self.int_lmt_update_btn.sizePolicy().hasHeightForWidth())
-        self.int_lmt_update_btn.setSizePolicy(sizePolicy6)
+        sizePolicy7.setHeightForWidth(self.int_lmt_update_btn.sizePolicy().hasHeightForWidth())
+        self.int_lmt_update_btn.setSizePolicy(sizePolicy7)
         self.int_lmt_update_btn.setFont(font2)
 
         self.gridLayout_7.addWidget(self.int_lmt_update_btn, 4, 2, 1, 1)
 
         self.ki_value_label = QLabel(self.groupBox_12)
         self.ki_value_label.setObjectName(u"ki_value_label")
-        sizePolicy5.setHeightForWidth(self.ki_value_label.sizePolicy().hasHeightForWidth())
-        self.ki_value_label.setSizePolicy(sizePolicy5)
+        sizePolicy6.setHeightForWidth(self.ki_value_label.sizePolicy().hasHeightForWidth())
+        self.ki_value_label.setSizePolicy(sizePolicy6)
         self.ki_value_label.setFont(font2)
 
         self.gridLayout_7.addWidget(self.ki_value_label, 2, 0, 1, 1)
 
         self.int_lmt_value_label = QLabel(self.groupBox_12)
         self.int_lmt_value_label.setObjectName(u"int_lmt_value_label")
-        sizePolicy5.setHeightForWidth(self.int_lmt_value_label.sizePolicy().hasHeightForWidth())
-        self.int_lmt_value_label.setSizePolicy(sizePolicy5)
+        sizePolicy6.setHeightForWidth(self.int_lmt_value_label.sizePolicy().hasHeightForWidth())
+        self.int_lmt_value_label.setSizePolicy(sizePolicy6)
         self.int_lmt_value_label.setFont(font2)
 
         self.gridLayout_7.addWidget(self.int_lmt_value_label, 4, 0, 1, 1)
 
         self.refresh_pid_btn = QPushButton(self.groupBox_12)
         self.refresh_pid_btn.setObjectName(u"refresh_pid_btn")
-        sizePolicy4.setHeightForWidth(self.refresh_pid_btn.sizePolicy().hasHeightForWidth())
-        self.refresh_pid_btn.setSizePolicy(sizePolicy4)
+        sizePolicy5.setHeightForWidth(self.refresh_pid_btn.sizePolicy().hasHeightForWidth())
+        self.refresh_pid_btn.setSizePolicy(sizePolicy5)
         self.refresh_pid_btn.setFont(font2)
 
         self.gridLayout_7.addWidget(self.refresh_pid_btn, 0, 0, 1, 2)
 
         self.kp_value_label = QLabel(self.groupBox_12)
         self.kp_value_label.setObjectName(u"kp_value_label")
-        sizePolicy5.setHeightForWidth(self.kp_value_label.sizePolicy().hasHeightForWidth())
-        self.kp_value_label.setSizePolicy(sizePolicy5)
+        sizePolicy6.setHeightForWidth(self.kp_value_label.sizePolicy().hasHeightForWidth())
+        self.kp_value_label.setSizePolicy(sizePolicy6)
         self.kp_value_label.setFont(font2)
 
         self.gridLayout_7.addWidget(self.kp_value_label, 1, 0, 1, 1)
 
         self.kd_update_btn = QPushButton(self.groupBox_12)
         self.kd_update_btn.setObjectName(u"kd_update_btn")
-        sizePolicy6.setHeightForWidth(self.kd_update_btn.sizePolicy().hasHeightForWidth())
-        self.kd_update_btn.setSizePolicy(sizePolicy6)
+        sizePolicy7.setHeightForWidth(self.kd_update_btn.sizePolicy().hasHeightForWidth())
+        self.kd_update_btn.setSizePolicy(sizePolicy7)
         self.kd_update_btn.setFont(font2)
 
         self.gridLayout_7.addWidget(self.kd_update_btn, 3, 2, 1, 1)
 
         self.sample_rate_update_btn = QPushButton(self.groupBox_12)
         self.sample_rate_update_btn.setObjectName(u"sample_rate_update_btn")
-        sizePolicy6.setHeightForWidth(self.sample_rate_update_btn.sizePolicy().hasHeightForWidth())
-        self.sample_rate_update_btn.setSizePolicy(sizePolicy6)
+        sizePolicy7.setHeightForWidth(self.sample_rate_update_btn.sizePolicy().hasHeightForWidth())
+        self.sample_rate_update_btn.setSizePolicy(sizePolicy7)
         self.sample_rate_update_btn.setFont(font2)
 
         self.gridLayout_7.addWidget(self.sample_rate_update_btn, 5, 2, 1, 1)
 
         self.sample_rate_value_label = QLabel(self.groupBox_12)
         self.sample_rate_value_label.setObjectName(u"sample_rate_value_label")
-        sizePolicy5.setHeightForWidth(self.sample_rate_value_label.sizePolicy().hasHeightForWidth())
-        self.sample_rate_value_label.setSizePolicy(sizePolicy5)
+        sizePolicy6.setHeightForWidth(self.sample_rate_value_label.sizePolicy().hasHeightForWidth())
+        self.sample_rate_value_label.setSizePolicy(sizePolicy6)
         self.sample_rate_value_label.setFont(font2)
 
         self.gridLayout_7.addWidget(self.sample_rate_value_label, 5, 0, 1, 1)
 
         self.sample_rate_input = QLineEdit(self.groupBox_12)
         self.sample_rate_input.setObjectName(u"sample_rate_input")
-        sizePolicy2.setHeightForWidth(self.sample_rate_input.sizePolicy().hasHeightForWidth())
-        self.sample_rate_input.setSizePolicy(sizePolicy2)
+        sizePolicy3.setHeightForWidth(self.sample_rate_input.sizePolicy().hasHeightForWidth())
+        self.sample_rate_input.setSizePolicy(sizePolicy3)
         self.sample_rate_input.setMinimumSize(QSize(0, 0))
         self.sample_rate_input.setFont(font1)
 
@@ -805,32 +825,32 @@ class Ui_MainWindow(object):
         self.gridLayout_9.setObjectName(u"gridLayout_9")
         self.decel_update_btn = QPushButton(self.groupBox_13)
         self.decel_update_btn.setObjectName(u"decel_update_btn")
-        sizePolicy6.setHeightForWidth(self.decel_update_btn.sizePolicy().hasHeightForWidth())
-        self.decel_update_btn.setSizePolicy(sizePolicy6)
+        sizePolicy7.setHeightForWidth(self.decel_update_btn.sizePolicy().hasHeightForWidth())
+        self.decel_update_btn.setSizePolicy(sizePolicy7)
         self.decel_update_btn.setFont(font2)
 
         self.gridLayout_9.addWidget(self.decel_update_btn, 3, 2, 1, 1)
 
         self.jog_label = QLabel(self.groupBox_13)
         self.jog_label.setObjectName(u"jog_label")
-        sizePolicy5.setHeightForWidth(self.jog_label.sizePolicy().hasHeightForWidth())
-        self.jog_label.setSizePolicy(sizePolicy5)
+        sizePolicy6.setHeightForWidth(self.jog_label.sizePolicy().hasHeightForWidth())
+        self.jog_label.setSizePolicy(sizePolicy6)
         self.jog_label.setFont(font2)
 
         self.gridLayout_9.addWidget(self.jog_label, 5, 0, 1, 1)
 
         self.hs_jog_label = QLabel(self.groupBox_13)
         self.hs_jog_label.setObjectName(u"hs_jog_label")
-        sizePolicy5.setHeightForWidth(self.hs_jog_label.sizePolicy().hasHeightForWidth())
-        self.hs_jog_label.setSizePolicy(sizePolicy5)
+        sizePolicy6.setHeightForWidth(self.hs_jog_label.sizePolicy().hasHeightForWidth())
+        self.hs_jog_label.setSizePolicy(sizePolicy6)
         self.hs_jog_label.setFont(font2)
 
         self.gridLayout_9.addWidget(self.hs_jog_label, 6, 0, 1, 1)
 
         self.hs_jog_input = QLineEdit(self.groupBox_13)
         self.hs_jog_input.setObjectName(u"hs_jog_input")
-        sizePolicy2.setHeightForWidth(self.hs_jog_input.sizePolicy().hasHeightForWidth())
-        self.hs_jog_input.setSizePolicy(sizePolicy2)
+        sizePolicy3.setHeightForWidth(self.hs_jog_input.sizePolicy().hasHeightForWidth())
+        self.hs_jog_input.setSizePolicy(sizePolicy3)
         self.hs_jog_input.setMinimumSize(QSize(200, 0))
         self.hs_jog_input.setFont(font1)
 
@@ -838,32 +858,32 @@ class Ui_MainWindow(object):
 
         self.accel_update_btn = QPushButton(self.groupBox_13)
         self.accel_update_btn.setObjectName(u"accel_update_btn")
-        sizePolicy6.setHeightForWidth(self.accel_update_btn.sizePolicy().hasHeightForWidth())
-        self.accel_update_btn.setSizePolicy(sizePolicy6)
+        sizePolicy7.setHeightForWidth(self.accel_update_btn.sizePolicy().hasHeightForWidth())
+        self.accel_update_btn.setSizePolicy(sizePolicy7)
         self.accel_update_btn.setFont(font2)
 
         self.gridLayout_9.addWidget(self.accel_update_btn, 1, 2, 1, 1)
 
         self.hs_jog_update_btn = QPushButton(self.groupBox_13)
         self.hs_jog_update_btn.setObjectName(u"hs_jog_update_btn")
-        sizePolicy6.setHeightForWidth(self.hs_jog_update_btn.sizePolicy().hasHeightForWidth())
-        self.hs_jog_update_btn.setSizePolicy(sizePolicy6)
+        sizePolicy7.setHeightForWidth(self.hs_jog_update_btn.sizePolicy().hasHeightForWidth())
+        self.hs_jog_update_btn.setSizePolicy(sizePolicy7)
         self.hs_jog_update_btn.setFont(font2)
 
         self.gridLayout_9.addWidget(self.hs_jog_update_btn, 6, 2, 1, 1)
 
         self.jog_update_btn = QPushButton(self.groupBox_13)
         self.jog_update_btn.setObjectName(u"jog_update_btn")
-        sizePolicy6.setHeightForWidth(self.jog_update_btn.sizePolicy().hasHeightForWidth())
-        self.jog_update_btn.setSizePolicy(sizePolicy6)
+        sizePolicy7.setHeightForWidth(self.jog_update_btn.sizePolicy().hasHeightForWidth())
+        self.jog_update_btn.setSizePolicy(sizePolicy7)
         self.jog_update_btn.setFont(font2)
 
         self.gridLayout_9.addWidget(self.jog_update_btn, 5, 2, 1, 1)
 
         self.accel_input = QLineEdit(self.groupBox_13)
         self.accel_input.setObjectName(u"accel_input")
-        sizePolicy2.setHeightForWidth(self.accel_input.sizePolicy().hasHeightForWidth())
-        self.accel_input.setSizePolicy(sizePolicy2)
+        sizePolicy3.setHeightForWidth(self.accel_input.sizePolicy().hasHeightForWidth())
+        self.accel_input.setSizePolicy(sizePolicy3)
         self.accel_input.setMinimumSize(QSize(0, 0))
         self.accel_input.setFont(font1)
 
@@ -871,8 +891,8 @@ class Ui_MainWindow(object):
 
         self.decel_input = QLineEdit(self.groupBox_13)
         self.decel_input.setObjectName(u"decel_input")
-        sizePolicy2.setHeightForWidth(self.decel_input.sizePolicy().hasHeightForWidth())
-        self.decel_input.setSizePolicy(sizePolicy2)
+        sizePolicy3.setHeightForWidth(self.decel_input.sizePolicy().hasHeightForWidth())
+        self.decel_input.setSizePolicy(sizePolicy3)
         self.decel_input.setMinimumSize(QSize(0, 0))
         self.decel_input.setFont(font1)
 
@@ -880,48 +900,48 @@ class Ui_MainWindow(object):
 
         self.decel_value_label = QLabel(self.groupBox_13)
         self.decel_value_label.setObjectName(u"decel_value_label")
-        sizePolicy5.setHeightForWidth(self.decel_value_label.sizePolicy().hasHeightForWidth())
-        self.decel_value_label.setSizePolicy(sizePolicy5)
+        sizePolicy6.setHeightForWidth(self.decel_value_label.sizePolicy().hasHeightForWidth())
+        self.decel_value_label.setSizePolicy(sizePolicy6)
         self.decel_value_label.setFont(font2)
 
         self.gridLayout_9.addWidget(self.decel_value_label, 3, 0, 1, 1)
 
         self.vel_value_label = QLabel(self.groupBox_13)
         self.vel_value_label.setObjectName(u"vel_value_label")
-        sizePolicy5.setHeightForWidth(self.vel_value_label.sizePolicy().hasHeightForWidth())
-        self.vel_value_label.setSizePolicy(sizePolicy5)
+        sizePolicy6.setHeightForWidth(self.vel_value_label.sizePolicy().hasHeightForWidth())
+        self.vel_value_label.setSizePolicy(sizePolicy6)
         self.vel_value_label.setFont(font2)
 
         self.gridLayout_9.addWidget(self.vel_value_label, 2, 0, 1, 1)
 
         self.vel_update_btn = QPushButton(self.groupBox_13)
         self.vel_update_btn.setObjectName(u"vel_update_btn")
-        sizePolicy6.setHeightForWidth(self.vel_update_btn.sizePolicy().hasHeightForWidth())
-        self.vel_update_btn.setSizePolicy(sizePolicy6)
+        sizePolicy7.setHeightForWidth(self.vel_update_btn.sizePolicy().hasHeightForWidth())
+        self.vel_update_btn.setSizePolicy(sizePolicy7)
         self.vel_update_btn.setFont(font2)
 
         self.gridLayout_9.addWidget(self.vel_update_btn, 2, 2, 1, 1)
 
         self.err_update_btn = QPushButton(self.groupBox_13)
         self.err_update_btn.setObjectName(u"err_update_btn")
-        sizePolicy6.setHeightForWidth(self.err_update_btn.sizePolicy().hasHeightForWidth())
-        self.err_update_btn.setSizePolicy(sizePolicy6)
+        sizePolicy7.setHeightForWidth(self.err_update_btn.sizePolicy().hasHeightForWidth())
+        self.err_update_btn.setSizePolicy(sizePolicy7)
         self.err_update_btn.setFont(font2)
 
         self.gridLayout_9.addWidget(self.err_update_btn, 4, 2, 1, 1)
 
         self.accel_value_label = QLabel(self.groupBox_13)
         self.accel_value_label.setObjectName(u"accel_value_label")
-        sizePolicy5.setHeightForWidth(self.accel_value_label.sizePolicy().hasHeightForWidth())
-        self.accel_value_label.setSizePolicy(sizePolicy5)
+        sizePolicy6.setHeightForWidth(self.accel_value_label.sizePolicy().hasHeightForWidth())
+        self.accel_value_label.setSizePolicy(sizePolicy6)
         self.accel_value_label.setFont(font2)
 
         self.gridLayout_9.addWidget(self.accel_value_label, 1, 0, 1, 1)
 
         self.vel_input = QLineEdit(self.groupBox_13)
         self.vel_input.setObjectName(u"vel_input")
-        sizePolicy2.setHeightForWidth(self.vel_input.sizePolicy().hasHeightForWidth())
-        self.vel_input.setSizePolicy(sizePolicy2)
+        sizePolicy3.setHeightForWidth(self.vel_input.sizePolicy().hasHeightForWidth())
+        self.vel_input.setSizePolicy(sizePolicy3)
         self.vel_input.setMinimumSize(QSize(0, 0))
         self.vel_input.setFont(font1)
 
@@ -929,16 +949,16 @@ class Ui_MainWindow(object):
 
         self.err_value_label = QLabel(self.groupBox_13)
         self.err_value_label.setObjectName(u"err_value_label")
-        sizePolicy5.setHeightForWidth(self.err_value_label.sizePolicy().hasHeightForWidth())
-        self.err_value_label.setSizePolicy(sizePolicy5)
+        sizePolicy6.setHeightForWidth(self.err_value_label.sizePolicy().hasHeightForWidth())
+        self.err_value_label.setSizePolicy(sizePolicy6)
         self.err_value_label.setFont(font2)
 
         self.gridLayout_9.addWidget(self.err_value_label, 4, 0, 1, 1)
 
         self.jog_input = QLineEdit(self.groupBox_13)
         self.jog_input.setObjectName(u"jog_input")
-        sizePolicy2.setHeightForWidth(self.jog_input.sizePolicy().hasHeightForWidth())
-        self.jog_input.setSizePolicy(sizePolicy2)
+        sizePolicy3.setHeightForWidth(self.jog_input.sizePolicy().hasHeightForWidth())
+        self.jog_input.setSizePolicy(sizePolicy3)
         self.jog_input.setMinimumSize(QSize(0, 0))
         self.jog_input.setFont(font1)
 
@@ -946,16 +966,16 @@ class Ui_MainWindow(object):
 
         self.refresh_motion_btn = QPushButton(self.groupBox_13)
         self.refresh_motion_btn.setObjectName(u"refresh_motion_btn")
-        sizePolicy4.setHeightForWidth(self.refresh_motion_btn.sizePolicy().hasHeightForWidth())
-        self.refresh_motion_btn.setSizePolicy(sizePolicy4)
+        sizePolicy5.setHeightForWidth(self.refresh_motion_btn.sizePolicy().hasHeightForWidth())
+        self.refresh_motion_btn.setSizePolicy(sizePolicy5)
         self.refresh_motion_btn.setFont(font2)
 
         self.gridLayout_9.addWidget(self.refresh_motion_btn, 0, 0, 1, 2)
 
         self.err_input = QLineEdit(self.groupBox_13)
         self.err_input.setObjectName(u"err_input")
-        sizePolicy2.setHeightForWidth(self.err_input.sizePolicy().hasHeightForWidth())
-        self.err_input.setSizePolicy(sizePolicy2)
+        sizePolicy3.setHeightForWidth(self.err_input.sizePolicy().hasHeightForWidth())
+        self.err_input.setSizePolicy(sizePolicy3)
         self.err_input.setMinimumSize(QSize(0, 0))
         self.err_input.setFont(font1)
 

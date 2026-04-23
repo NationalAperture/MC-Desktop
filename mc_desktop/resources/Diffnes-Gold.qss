@@ -885,6 +885,12 @@ QRadioButton::indicator::checked
 
 }
 
+/*------QScrollArea-----*/
+QScrollArea
+{
+    margin-top:30px;
+
+}
 
 /*-----QScrollBar-----*/
 QScrollBar:vertical 

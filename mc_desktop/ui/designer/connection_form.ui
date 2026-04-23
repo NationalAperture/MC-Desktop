@@ -43,6 +43,7 @@
         <property name="font">
          <font>
           <pointsize>13</pointsize>
+          <bold>true</bold>
          </font>
         </property>
         <item>
@@ -88,7 +89,7 @@
         <property name="font">
          <font>
           <pointsize>13</pointsize>
-          <italic>true</italic>
+          <italic>false</italic>
           <bold>true</bold>
          </font>
         </property>
@@ -108,7 +109,7 @@
         <property name="font">
          <font>
           <pointsize>13</pointsize>
-          <italic>true</italic>
+          <italic>false</italic>
           <bold>true</bold>
          </font>
         </property>
@@ -122,7 +123,7 @@
         <property name="font">
          <font>
           <pointsize>13</pointsize>
-          <italic>true</italic>
+          <italic>false</italic>
           <bold>true</bold>
          </font>
         </property>
@@ -145,7 +146,7 @@
            <x>0</x>
            <y>0</y>
            <width>460</width>
-           <height>150</height>
+           <height>210</height>
           </rect>
          </property>
          <layout class="QVBoxLayout" name="verticalLayout">
@@ -172,10 +173,24 @@
      </property>
      <layout class="QGridLayout" name="gridLayout_3">
       <item row="2" column="1">
-       <widget class="QComboBox" name="to_node_IDNs_cb"/>
+       <widget class="QComboBox" name="to_node_IDNs_cb">
+        <property name="font">
+         <font>
+          <pointsize>13</pointsize>
+          <bold>true</bold>
+         </font>
+        </property>
+       </widget>
       </item>
       <item row="2" column="0">
-       <widget class="QComboBox" name="from_node_IDNs_cb"/>
+       <widget class="QComboBox" name="from_node_IDNs_cb">
+        <property name="font">
+         <font>
+          <pointsize>13</pointsize>
+          <bold>true</bold>
+         </font>
+        </property>
+       </widget>
       </item>
       <item row="0" column="2" colspan="2">
        <widget class="QPushButton" name="add_node_btn">
@@ -205,6 +220,12 @@
           <verstretch>0</verstretch>
          </sizepolicy>
         </property>
+        <property name="font">
+         <font>
+          <pointsize>13</pointsize>
+          <bold>true</bold>
+         </font>
+        </property>
         <property name="text">
          <string>Change Selected</string>
         </property>
@@ -218,6 +239,12 @@
           <verstretch>0</verstretch>
          </sizepolicy>
         </property>
+        <property name="font">
+         <font>
+          <pointsize>13</pointsize>
+          <bold>true</bold>
+         </font>
+        </property>
         <property name="text">
          <string>Remove Selected</string>
         </property>
@@ -225,6 +252,12 @@
       </item>
       <item row="0" column="1">
        <widget class="QComboBox" name="add_node_IDNs_cb">
+        <property name="font">
+         <font>
+          <pointsize>13</pointsize>
+          <bold>true</bold>
+         </font>
+        </property>
         <property name="insertPolicy">
          <enum>QComboBox::InsertPolicy::NoInsert</enum>
         </property>
@@ -286,7 +319,14 @@
        </widget>
       </item>
       <item row="1" column="1">
-       <widget class="QComboBox" name="remove_node_IDNs_cb"/>
+       <widget class="QComboBox" name="remove_node_IDNs_cb">
+        <property name="font">
+         <font>
+          <pointsize>13</pointsize>
+          <bold>true</bold>
+         </font>
+        </property>
+       </widget>
       </item>
      </layout>
     </widget>
