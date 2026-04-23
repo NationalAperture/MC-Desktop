@@ -120,7 +120,7 @@ def candidate_ports() -> list[tuple[str, str, str]]:
         return ports
 
 class Connection(QWidget):
-    def __init__(self, parent: Optional[MainWindow] = None) -> None:
+    def __init__(self, parent: MainWindow) -> None:
         super().__init__()
         self.ui = Ui_Connection_Form()
         self.ui.setupUi(self)
@@ -128,7 +128,6 @@ class Connection(QWidget):
 
     def __setup__(self, parent: MainWindow) -> None:
         self.parent = parent
-        # self.ui.remove_node_combo.addItem("1")
         self.ui.search_ports_btn.pressed.connect(self.search_ports)
         self.ui.connect_btn.clicked.connect(self.select_port)
         self.ui.add_node_btn.pressed.connect(self.add_node)
@@ -140,31 +139,38 @@ class Connection(QWidget):
         self.parent.serial.connection.baudrate = self.ui.baud_rates.currentText()
 
     def add_node(self) -> None:
-        node_id = self.ui.add_node_value.text()
-        if not node_id:
-            return
+        node_id = self.ui.add_node_IDNs_cb.currentText()
         if self.parent.add_node(node_id):
-            self.ui.remove_node_combo.addItem(node_id)
-            self.parent.comboBox.setCurrentIndex(self.parent.comboBox.count() - 1)
+            self.ui.remove_node_IDNs_cb.addItem(node_id)
             # self.parent.get_node_values(node_id)
 
+        self.ui.add_node_IDNs_cb.removeItem(self.ui.add_node_IDNs_cb.currentIndex())
+
     def remove_node(self) -> None:
-        node_index = self.ui.remove_node_combo.currentIndex()
+        node_index = self.ui.remove_node_IDNs_cb.currentIndex()
         if node_index < 0:
             return
-        node_id = self.ui.remove_node_combo.itemText(node_index)
+        node_id = self.ui.remove_node_IDNs_cb.itemText(node_index)
         if self.parent.remove_node(node_id, node_index):
-            self.ui.remove_node_combo.removeItem(node_index)
+            self.ui.remove_node_IDNs_cb.removeItem(node_index)
+
+        for i in range(self.ui.add_node_IDNs_cb.count()):
+            if int(self.ui.add_node_IDNs_cb.itemText(i)) > int(node_id):
+                print(f"node: {self.ui.add_node_IDNs_cb.itemText(i)}, index: {i}")
+                self.ui.add_node_IDNs_cb.insertItem(i, node_id)
+                break
+
+
 
     def update_node(self) -> None:
         # This changes the currently selected node's id, to the new id the user has just entered.
-        current_node = self.parent.node_manager.current_node_id
-        new_node = self.ui.update_node_value.text()
-        for i in range(self.ui.remove_node_combo.count()):
-            if self.ui.remove_node_combo.itemText(i) == current_node:
-                if self.parent.update_node_id(i, current_node, new_node):
-                    self.ui.remove_node_combo.setItemText(i, new_node)
-                    self.ui.update_node_value.clear()
+        from_value = self.ui.from_node_IDNs_cb.currentText()
+        to_value = self.ui.to_node_IDNs_cb.currentText()
+
+        for i in range(self.ui.remove_node_IDNs_cb.count()):
+            if self.ui.remove_node_IDNs_cb.itemText(i) == from_value:
+                if self.parent.update_node_id(i, from_value, to_value):
+                    self.ui.remove_node_IDNs_cb.setItemText(i, to_value)
                 break
 
     def select_port(self) -> None:
@@ -174,7 +180,6 @@ class Connection(QWidget):
         successful = self.parent.serial.setup_connection()
         if successful:
             self.parent.set_connection_status(True)
-            self.ui.tabWidget.setCurrentIndex(1)
             # self.parent.get_node_values()
 
     def search_ports(self) -> None:
